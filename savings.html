@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Savings | Al-Amanah MCS</title>
+<link rel="icon" href="assets/logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page-role="member">
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.jpg" alt="KwaraCAILS crest">
+      <div class="brand-text"><strong>Al-Amanah MCS</strong><span>Kwaracails &middot; Ilorin</span></div>
+    </a>
+    <nav class="nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="profile.html">My Profile</a>
+      <a href="apply-loan.html">Apply for Loan</a>
+      <a href="loan-info.html">Loan Products</a>
+      <a href="index.html" data-nav="home">Home</a>
+    </nav>
+    <div class="nav-cta">
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
+      <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" style="padding:32px 0 80px;">
+  <a href="dashboard.html" style="font-size:13px;color:var(--ink-soft);text-decoration:none;">&larr; Back to Dashboard</a>
+  <div class="section-heading" style="margin-top:14px;">
+    <h2>My Savings</h2>
+    <span style="font-size:13px;color:var(--ink-soft)" id="savingsSubtext">Your full savings passbook</span>
+  </div>
+
+  <div id="savingsSummary" class="ledger-rows" style="margin-bottom:24px;background:var(--paper);border-radius:var(--radius-m);padding:20px;box-shadow:var(--shadow-card);"></div>
+
+  <p class="lede" style="font-size:12px;margin-bottom:18px;">The administrative charge is 7.5% of your monthly savings contribution. It is deducted from your salary separately — it is never subtracted from your savings balance above.</p>
+
+  <h4 style="margin:0 0 10px;">Savings history</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th></tr></thead>
+      <tbody id="savingsHistoryBody"><tr class="empty-row"><td colspan="4">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-bottom">
+      <span>&copy; 2026 Al-Amanah Multi-Purpose Co-operative Society.</span>
+      <span>Affiliated with KwaraCAILS, Ilorin</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js?v=3"></script>
+<script src="js/data-live.js?v=22"></script>
+<script src="js/main.js?v=5"></script>
+<script src="js/route-guard.js?v=4"></script>
+<script src="js/savings.js?v=2"></script>
+</body>
+</html>

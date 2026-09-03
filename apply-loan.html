@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apply for a Loan | Al-Amanah MCS</title>
+<link rel="icon" href="assets/logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page-role="member">
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.jpg" alt="KwaraCAILS crest">
+      <div class="brand-text"><strong>Al-Amanah MCS</strong><span>Kwaracails &middot; Ilorin</span></div>
+    </a>
+    <nav class="nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="profile.html">My Profile</a>
+      <a href="apply-loan.html" class="active">Apply for Loan</a>
+      <a href="loan-info.html">Loan Products</a>
+      <a href="index.html" data-nav="home">Home</a>
+    </nav>
+    <div class="nav-cta">
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
+      <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
+    </div>
+  </div>
+</header>
+
+<section class="section-tight">
+  <div class="wrap" style="max-width:760px;">
+    <span class="eyebrow">Loan application</span>
+    <h1>Apply for a loan</h1>
+    <p class="lede">Your eligible amount is calculated from your current savings balance. Choose a loan type to begin.</p>
+
+    <div class="form-note" id="eligibilityNote" style="margin:20px 0 26px;">Loading your savings balance…</div>
+
+    <form id="loanForm">
+      <div class="type-picker" id="typePicker"></div>
+
+      <div class="field">
+        <label for="amount">Loan amount (₦)</label>
+        <input type="number" id="amount" min="1000" step="1000" placeholder="e.g. 200000" required>
+        <div class="hint" id="amountHint">Select a loan type above to see your maximum eligible amount.</div>
+      </div>
+
+      <div class="field" id="durationField" style="display:none;">
+        <label>Repayment duration</label>
+        <input type="text" id="durationDisplay" disabled>
+        <div class="hint">Fixed term for this loan type — not adjustable.</div>
+      </div>
+
+      <div class="field">
+        <label for="purpose">Purpose of loan</label>
+        <textarea id="purpose" placeholder="Briefly describe what this loan is for…" required></textarea>
+      </div>
+
+      <div class="form-error" id="applyError"></div>
+
+      <div class="form-note" style="margin-bottom:22px;">
+        <strong>Application fee:</strong> a ₦1,000 non-refundable application fee applies to every loan
+        request. Online card payment is coming soon — for now, applications are accepted and this fee is
+        reconciled by the society office before disbursement.
+      </div>
+
+      <div class="ledger-card" id="previewCard" style="margin-bottom:22px;display:none;">
+        <div class="ledger-head"><div><span class="ledger-tag">Automated repayment outlook</span><h3>Estimated schedule</h3></div></div>
+        <div class="ledger-rows">
+          <div class="ledger-row" id="prevFeeRow" style="display:none;"><span id="prevFeeLabel">Commodity loan charge (10%)</span><span id="prevAdminCharge">₦0</span></div>
+          <div class="ledger-row"><span>Total repayable</span><span id="prevTotalRepayable">₦0</span></div>
+          <div class="ledger-row"><span>Monthly loan deduction</span><span id="prevMonthly">₦0</span></div>
+          <div class="ledger-row" id="prevAdminMonthlyRow" style="display:none;"><span>Monthly loan obligation</span><span id="prevAdminMonthly">₦0</span></div>
+          <div class="ledger-row"><span>Total monthly commitment</span><span id="prevTotal">₦0</span></div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Submit application for review</button>
+    </form>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-bottom">
+      <span>&copy; 2026 Al-Amanah Multi-Purpose Co-operative Society.</span>
+      <span>Affiliated with KwaraCAILS, Ilorin</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js?v=2"></script>
+<script src="js/data-live.js?v=22"></script>
+<script src="js/route-guard.js?v=4"></script>
+<script src="js/main.js?v=5"></script>
+<script src="js/apply-loan.js?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Payslip | Al-Amanah MCS</title>
+<link rel="icon" href="assets/logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page-role="member">
+
+<header class="site-header no-print">
+  <div class="wrap nav">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.jpg" alt="KwaraCAILS crest">
+      <div class="brand-text"><strong>Al-Amanah MCS</strong><span>Kwaracails &middot; Ilorin</span></div>
+    </a>
+    <nav class="nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="profile.html">My Profile</a>
+      <a href="apply-loan.html">Apply for Loan</a>
+      <a href="loan-info.html">Loan Products</a>
+      <a href="index.html" data-nav="home">Home</a>
+    </nav>
+    <div class="nav-cta">
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
+      <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap print-page" style="padding:32px 0 80px;max-width:640px;">
+  <a href="dashboard.html" class="no-print" style="font-size:13px;color:var(--ink-soft);text-decoration:none;">&larr; Back to Dashboard</a>
+
+  <div class="no-print" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin:18px 0 20px;flex-wrap:wrap;">
+    <div class="field" style="margin:0;">
+      <label for="payslipMonth">Payslip month</label>
+      <input type="month" id="payslipMonth" onchange="renderPayslip()">
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="printPayslip()">Print</button>
+  </div>
+
+  <div id="payslipContent"><p class="lede">Loading…</p></div>
+</div>
+
+<footer class="site-footer no-print">
+  <div class="wrap">
+    <div class="footer-bottom">
+      <span>&copy; 2026 Al-Amanah Multi-Purpose Co-operative Society.</span>
+      <span>Affiliated with KwaraCAILS, Ilorin</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js?v=3"></script>
+<script src="js/data-live.js?v=22"></script>
+<script src="js/main.js?v=5"></script>
+<script src="js/route-guard.js?v=4"></script>
+<script src="js/payslip.js"></script>
+</body>
+</html>

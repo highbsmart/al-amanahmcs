@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verifying Payment | Al-Amanah MCS</title>
+<link rel="icon" href="assets/logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page-role="member">
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.jpg" alt="KwaraCAILS crest">
+      <div class="brand-text"><strong>Al-Amanah MCS</strong><span>Kwaracails &middot; Ilorin</span></div>
+    </a>
+  </div>
+</header>
+
+<div class="auth-shell">
+  <div class="auth-card" style="text-align:center;">
+    <div class="brand" style="justify-content:center;"><img src="assets/logo.jpg" alt="Crest" style="width:52px;height:52px;"></div>
+    <h1 id="callbackTitle">Verifying Payment&hellip;</h1>
+    <p class="lede" id="callbackMessage">Please wait while we confirm your payment with Paystack. Do not close this page.</p>
+    <div id="callbackSpinner" style="margin:20px auto;width:34px;height:34px;border:3px solid rgba(28,38,32,.15);border-top-color:var(--green-700);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+    <a href="dashboard.html" class="btn btn-primary btn-block" id="callbackDashboardBtn" style="display:none;margin-top:10px;">Return to Dashboard</a>
+  </div>
+</div>
+
+<style>@keyframes spin{to{transform:rotate(360deg);}}</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/data-live.js?v=22"></script>
+<script src="js/route-guard.js?v=4"></script>
+<script src="js/main.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const params = new URLSearchParams(window.location.search);
+  // Paystack appends both of these to the callback URL — either works.
+  const reference = params.get("reference") || params.get("trxref");
+  const titleEl = document.getElementById("callbackTitle");
+  const msgEl = document.getElementById("callbackMessage");
+  const spinnerEl = document.getElementById("callbackSpinner");
+  const btnEl = document.getElementById("callbackDashboardBtn");
+
+  function finish(title, message, ok) {
+    titleEl.textContent = title;
+    msgEl.textContent = message;
+    spinnerEl.style.display = "none";
+    btnEl.style.display = "";
+    if (ok) titleEl.style.color = "var(--green-700)";
+  }
+
+  if (!reference) {
+    finish("Something Went Wrong", "No payment reference was found on this page. If you completed a payment, please check your Loan Offset History on the dashboard, or contact the cooperative.", false);
+    return;
+  }
+
+  try {
+    const result = await verifyOffsetPayment(reference);
+    if (result.status === "completed" || result.status === "already_completed") {
+      finish("Payment Successful", "Your payment has been verified and your loan balance has been updated. You can view the details on your dashboard.", true);
+    } else if (result.status === "payment_not_successful") {
+      finish("Payment Not Completed", "Paystack reports this payment was not successful. No changes were made to your loan. You can try again from your dashboard.", false);
+    } else {
+      finish("Could Not Confirm Payment", result.message || "Please check your Loan Offset History on the dashboard, or contact the cooperative if this persists.", false);
+    }
+  } catch (err) {
+    finish("Could Not Confirm Payment", err.message || "Please check your Loan Offset History on the dashboard, or contact the cooperative if this persists.", false);
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Dashboard | Al-Amanah MCS</title>
+<link rel="icon" href="assets/logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page-role="member">
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.jpg" alt="KwaraCAILS crest">
+      <div class="brand-text"><strong>Al-Amanah MCS</strong><span>Kwaracails &middot; Ilorin</span></div>
+    </a>
+    <nav class="nav-links">
+      <a href="dashboard.html" class="active">Dashboard</a>
+      <a href="profile.html">My Profile</a>
+      <a href="apply-loan.html">Apply for Loan</a>
+      <a href="loan-info.html">Loan Products</a>
+      <a href="index.html" data-nav="home">Home</a>
+    </nav>
+    <div class="nav-cta">
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
+      <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
+    </div>
+  </div>
+</header>
+
+<section class="dash-header">
+  <div class="wrap">
+    <div class="dash-welcome">
+      <span id="dashAlaNo">AL/0000/000</span>
+      <h1 id="dashWelcome">Welcome back</h1>
+      <p style="color:rgba(247,242,228,.75);margin:0;" id="dashDept">Department</p>
+    </div>
+    <a href="apply-loan.html" class="btn btn-gold">Apply for a loan</a>
+  </div>
+</section>
+
+<div class="wrap dash-body">
+
+  <div class="dash-grid">
+    <a href="savings.html" class="ledger-card reveal" style="cursor:pointer;text-decoration:none;color:inherit;display:block;" title="View your full savings passbook">
+      <div class="ledger-head">
+        <div><span class="ledger-tag">Savings passbook</span><h3>My Savings</h3></div>
+        <span class="pill pill-ok" id="statusPill">Active</span>
+      </div>
+      <div class="ledger-amount" id="savingsAmount">₦0</div>
+      <p class="ledger-sub">Current balance on record — tap to view full details &rarr;</p>
+    </a>
+
+    <a href="loans.html" class="ledger-card reveal" style="cursor:pointer;text-decoration:none;color:inherit;display:block;" title="View your loan applications and obligations">
+      <div class="ledger-head">
+        <div><span class="ledger-tag">Running loans</span><h3>Loan Obligations</h3></div>
+        <span class="pill pill-wait" id="loanCountPill">0 active</span>
+      </div>
+      <div class="ledger-amount" id="loanBalanceAmount">₦0</div>
+      <p class="ledger-sub">Total amount of your active loans before any deductions — tap to view full details &rarr;</p>
+    </a>
+
+    <a href="loans.html" class="ledger-card reveal" style="cursor:pointer;text-decoration:none;color:inherit;display:block;" title="Check what you're eligible for">
+      <div class="ledger-head">
+        <div><span class="ledger-tag">Loan facility</span><h3>Available Loan Balance</h3></div>
+        <span class="pill pill-ok" id="availableCountPill">0 loans</span>
+      </div>
+      <div class="ledger-amount" id="availableAmount">₦0</div>
+      <p class="ledger-sub">What's left to pay on those loans after deductions so far — tap to view full details &rarr;</p>
+    </a>
+  </div>
+
+  <div class="section-heading" style="margin-top:40px;">
+    <h2>Quick links</h2>
+    <span style="font-size:13px;color:var(--ink-soft)">Everything else you can do from here</span>
+  </div>
+  <div class="dash-grid">
+    <a href="savings.html" class="card reveal" style="text-decoration:none;color:inherit;">
+      <div class="icon">&#128176;</div>
+      <h3>Savings</h3>
+      <p>Your full savings passbook and contribution history.</p>
+    </a>
+    <a href="loans.html" class="card reveal" style="text-decoration:none;color:inherit;">
+      <div class="icon">&#128179;</div>
+      <h3>Loans</h3>
+      <p>Your loan applications, active obligations and eligibility.</p>
+    </a>
+    <a href="transactions.html" class="card reveal" style="text-decoration:none;color:inherit;">
+      <div class="icon">&#128203;</div>
+      <h3>Transactions</h3>
+      <p>Full history of savings, charges and loan offset payments.</p>
+    </a>
+    <a href="payslip.html" class="card reveal" style="text-decoration:none;color:inherit;">
+      <div class="icon">&#128462;</div>
+      <h3>Payslip</h3>
+      <p>Generate and print your monthly deduction payslip.</p>
+    </a>
+    <a href="apply-loan.html" class="card reveal" style="text-decoration:none;color:inherit;">
+      <div class="icon">&#9997;</div>
+      <h3>Apply for Loan</h3>
+      <p>Submit a new loan application for committee review.</p>
+    </a>
+    <a href="profile.html" class="card reveal" style="text-decoration:none;color:inherit;">
+      <div class="icon">&#128100;</div>
+      <h3>My Profile</h3>
+      <p>Your personal and membership details.</p>
+    </a>
+  </div>
+
+</div>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-bottom">
+      <span>&copy; 2026 Al-Amanah Multi-Purpose Co-operative Society.</span>
+      <span>Affiliated with KwaraCAILS, Ilorin</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js?v=3"></script>
+<script src="js/data-live.js?v=22"></script>
+<script src="js/main.js?v=5"></script>
+<script src="js/route-guard.js?v=4"></script>
+<script src="js/dashboard.js?v=18"></script>
+</body>
+</html>

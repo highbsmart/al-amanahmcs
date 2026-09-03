@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Loans | Al-Amanah MCS</title>
+<link rel="icon" href="assets/logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page-role="member">
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.jpg" alt="KwaraCAILS crest">
+      <div class="brand-text"><strong>Al-Amanah MCS</strong><span>Kwaracails &middot; Ilorin</span></div>
+    </a>
+    <nav class="nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="profile.html">My Profile</a>
+      <a href="apply-loan.html">Apply for Loan</a>
+      <a href="loan-info.html">Loan Products</a>
+      <a href="index.html" data-nav="home">Home</a>
+    </nav>
+    <div class="nav-cta">
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
+      <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" style="padding:32px 0 80px;">
+  <a href="dashboard.html" style="font-size:13px;color:var(--ink-soft);text-decoration:none;">&larr; Back to Dashboard</a>
+
+  <div class="section-heading" style="margin-top:14px;">
+    <h2>Your loan applications</h2>
+    <span style="font-size:13px;color:var(--ink-soft)">Status updates as the committee reviews each request</span>
+  </div>
+  <div class="table-wrap" style="display:flex;gap:4px;padding:6px;flex-wrap:wrap;margin-bottom:16px;">
+    <a href="apply-loan.html" class="btn btn-primary btn-sm">Apply for a new loan</a>
+    <button class="btn btn-ghost btn-sm" onclick="openOffsetModal()">Loan Offset Payment</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Loan ID</th><th>Type</th><th>Amount</th><th>Balance</th><th>Monthly</th><th>Progress</th><th>Applied</th><th></th></tr>
+      </thead>
+      <tbody id="loansTableBody">
+        <tr class="empty-row"><td colspan="8">Loading your loan records…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="eligibility" class="section-heading" style="margin-top:40px;">
+    <h2>Check your eligibility</h2>
+    <span style="font-size:13px;color:var(--ink-soft)">Based on your current savings balance — before you apply</span>
+  </div>
+  <div class="dash-grid" id="eligibilityCards"></div>
+
+  <div class="section-heading" style="margin-top:40px;">
+    <h2>Loan Offset History</h2>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Reference</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="offsetHistoryBody">
+        <tr class="empty-row"><td colspan="5">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-overlay" id="loanDetailsModal" hidden>
+  <div class="modal-card" style="max-width:760px;max-height:85vh;overflow:auto;">
+    <div class="modal-header-row"><h3>Active Loan Details</h3><button type="button" class="modal-close-x" onclick="closeLoanDetails()" aria-label="Close">&times;</button></div>
+    <div id="loanDetailsContent"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="offsetModal" hidden>
+  <div class="modal-card" style="max-width:560px;max-height:88vh;overflow:auto;">
+    <div class="modal-header-row"><h3>Loan Offset Payment</h3><button type="button" class="modal-close-x" onclick="closeOffsetModal()" aria-label="Close">&times;</button></div>
+    <div id="offsetModalBody"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="offsetReceiptModal" hidden>
+  <div class="modal-card" style="max-width:640px;max-height:88vh;overflow:auto;">
+    <div class="modal-header-row"><h3>Payment Receipt</h3><button type="button" class="modal-close-x" onclick="closeOffsetReceipt()" aria-label="Close">&times;</button></div>
+    <div class="no-print" style="text-align:right;margin-bottom:14px;">
+      <button class="btn btn-primary btn-sm" onclick="window.print()">Print Receipt</button>
+    </div>
+    <div id="offsetReceiptBody"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="offsetLetterModal" hidden>
+  <div class="modal-card" style="max-width:640px;max-height:88vh;overflow:auto;">
+    <div class="modal-header-row"><h3>Loan Offset Letter</h3><button type="button" class="modal-close-x" onclick="closeOffsetLetter()" aria-label="Close">&times;</button></div>
+    <div class="no-print" style="text-align:right;margin-bottom:14px;">
+      <button class="btn btn-primary btn-sm" onclick="window.print()">Print Letter</button>
+    </div>
+    <div id="offsetLetterBody"></div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-bottom">
+      <span>&copy; 2026 Al-Amanah Multi-Purpose Co-operative Society.</span>
+      <span>Affiliated with KwaraCAILS, Ilorin</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js?v=3"></script>
+<script src="js/data-live.js?v=22"></script>
+<script src="js/main.js?v=5"></script>
+<script src="js/route-guard.js?v=4"></script>
+<script src="js/loans.js?v=2"></script>
+<script src="js/loan-offset.js"></script>
+</body>
+</html>

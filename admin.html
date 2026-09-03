@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Portal | Al-Amanah MCS</title>
+<link rel="icon" href="assets/logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page-role="admin">
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.jpg" alt="KwaraCAILS crest">
+      <div class="brand-text"><strong>Al-Amanah MCS</strong><span>Kwaracails &middot; Ilorin</span></div>
+    </a>
+    <nav class="nav-links">
+      <a href="index.html" data-nav="home">Home</a>
+      <a href="login.html" data-nav="home">Member Login</a>
+      <a href="admin.html" class="active">Admin</a>
+    </nav>
+    <div class="nav-cta">
+      <button class="btn btn-outline btn-sm" id="adminViewAsMemberBtn" style="display:none;">View as Member</button>
+      <button class="btn btn-ghost btn-sm" id="adminLogoutBtn" style="display:none;">Log out</button>
+      <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
+    </div>
+  </div>
+</header>
+
+<!-- Shown briefly while we check whether there's already a signed-in
+     session — e.g. right after "Return to Admin Portal" navigates
+     here. Prevents the login form from flashing on screen for
+     someone who's actually already signed in. -->
+<div class="auth-shell" id="adminSessionChecking">
+  <div class="auth-card" style="text-align:center;">
+    <div class="session-spinner"></div>
+    <p class="lede" style="margin:14px 0 0;">Loading your admin panel…</p>
+  </div>
+</div>
+
+<!-- Admin login -->
+<div class="auth-shell" id="adminLoginShell" style="display:none;">
+  <div class="auth-card">
+    <div class="brand"><img src="assets/logo.jpg" alt="Crest" style="width:52px;height:52px;"></div>
+    <h1>Admin Portal</h1>
+    <p class="lede">Restricted to the Al-Amanah management committee.</p>
+    <div class="form-error" id="adminLoginError">Incorrect username or password.</div>
+    <form id="adminLoginForm">
+      <div class="field"><label for="adminUser">Admin email</label><input type="email" id="adminUser" required autocomplete="username"></div>
+      <div class="field"><label for="adminPass">Password</label>
+        <div style="position:relative;">
+          <input type="password" id="adminPass" required autocomplete="current-password" style="padding-right:70px;">
+          <button type="button" onclick="togglePw('adminPass',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--green-700);font-size:12.5px;font-weight:600;cursor:pointer;">Show</button>
+        </div>
+        <div class="hint" id="capsWarnAdmin" style="display:none;color:var(--danger);">⚠ Caps Lock is on</div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="adminLoginSubmit">Log in to admin panel</button>
+    </form>
+    <div class="form-note">Admin accounts are created directly in Supabase by your developer — see SETUP.md. There is no self-signup for admin access.</div>
+  </div>
+</div>
+
+<!-- Admin panel -->
+<div id="adminPanel" style="display:none;">
+  <section class="dash-header">
+    <div class="wrap">
+      <div class="dash-welcome">
+        <span>Management Committee</span>
+        <h1>Admin Control Panel</h1>
+        <p style="color:rgba(247,242,228,.75);margin:0;">Review applications, manage members, monitor obligations.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap dash-body">
+    <div class="stat-strip" id="statStrip"></div>
+
+    <div class="admin-tabs" style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;">
+        <div class="admin-tab" data-tab="management" onclick="switchTab('management')">Management Team</div>
+        <div class="admin-tab active" data-tab="pending" onclick="switchTab('pending')">Pending Applications</div>
+        <div class="admin-tab" data-tab="members" onclick="switchTab('members')">All Members</div>
+        <div class="admin-tab" data-tab="deductions" onclick="switchTab('deductions')">Deductions</div>
+        <div class="admin-tab" data-tab="history" onclick="switchTab('history')">Decision History</div>
+        <div class="admin-tab" data-tab="reports" onclick="switchTab('reports')">Reports</div>
+      </div>
+      <button class="btn btn-outline btn-sm" id="refreshBtn" style="margin-left:auto;" onclick="renderAdmin()">&#8635; Refresh</button>
+    </div>
+
+    <div id="tab-management" class="tab-content" style="display:none;">
+      <div id="managementOverviewBody"><p class="hint">Loading…</p></div>
+    </div>
+
+    <div id="tab-pending" class="tab-content">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Loan ID</th><th>Member</th><th>Al-Amanah No.</th><th>Type</th><th>Amount</th><th>Duration</th><th>Purpose</th><th>Applied</th><th>Action</th></tr></thead>
+          <tbody id="pendingTableBody"><tr class="empty-row"><td colspan="9">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="tab-members" class="tab-content" style="display:none;">
+      <div class="admin-toolbar">
+        <button class="btn btn-primary" onclick="openCreateMemberModal()">+ Create New Member</button>
+        <button class="btn btn-outline" onclick="openBulkMemberModal()">Upload Bulk Members (CSV)</button>
+        <a class="btn btn-ghost btn-sm" href="bulk_members_template.csv" download="bulk_members_template.csv">&#8681; Download CSV Template</a>
+        <input type="text" class="admin-search" id="memberSearchInput" placeholder="Search by name or Al-Amanah number…" oninput="renderMembersTable(currentMembers)">
+        <div class="action-menu" style="margin-left:auto;">
+          <button class="btn btn-outline btn-sm" onclick="toggleActionMenu(this)">Bulk Savings Controls &#9662;</button>
+          <div class="action-menu-list align-right" hidden>
+            <div class="action-menu-label">Selected members</div>
+            <button onclick="pauseResumeSelectedSavings(true)">Pause savings (selected)</button>
+            <button onclick="pauseResumeSelectedSavings(false)">Resume savings (selected)</button>
+            <div class="action-menu-divider"></div>
+            <div class="action-menu-label">All members</div>
+            <button onclick="pauseResumeAllSavings(true)">Pause savings (all)</button>
+            <button onclick="pauseResumeAllSavings(false)">Resume savings (all)</button>
+          </div>
+        </div>
+      </div>
+      <div class="bulk-toolbar" id="membersBulkToolbar" style="display:none;">
+        <span class="bulk-count" id="membersBulkCount">0 selected</span>
+        <button class="btn btn-primary btn-sm" onclick="processSelectedSavings()">Process Monthly Savings for Selected</button>
+        <div class="action-menu">
+          <button class="btn btn-outline btn-sm" onclick="toggleActionMenu(this)">More Actions &#9662;</button>
+          <div class="action-menu-list" hidden>
+            <button onclick="pauseResumeSelectedDeductions(true)">Pause deductions (selected)</button>
+            <button onclick="pauseResumeSelectedDeductions(false)">Resume deductions (selected)</button>
+            <button onclick="markReviewedBulk()">Mark savings review (selected)</button>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th class="checkbox-cell"><input type="checkbox" id="membersSelectAll" onchange="toggleSelectAllMembers(this.checked)"></th>
+            <th>Al-Amanah No.</th><th>Name</th><th>Savings</th><th>Monthly Amt.</th><th>Admin Charges</th>
+            <th>Savings</th><th>Deductions</th><th>Status</th><th>Next Review</th><th>Action</th>
+          </tr></thead>
+          <tbody id="membersTableBody"><tr class="empty-row"><td colspan="10">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="section-heading" style="margin-top:24px;">
+        <h3>Pending Registration (<span id="pendingDirectoryCount">0</span>)</h3>
+        <span class="lede">Added by an admin but not yet claimed — they won't appear in "All Members" above until they set up their password at Member Login using the Al-Amanah No. and surname shown here.</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Al-Amanah No.</th><th>Name</th><th>Department</th><th>Opening Savings</th><th>Monthly Amt.</th><th>Opening Admin Charge</th><th>Action</th></tr></thead>
+          <tbody id="pendingDirectoryBody"><tr class="empty-row"><td colspan="7">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="tab-deductions" class="tab-content" style="display:none;">
+      <div class="admin-toolbar">
+        <span style="font-size:13px;color:var(--ink-soft);">Approved loans only — each processes that loan's own monthly repayment amount and never touches the member's savings.</span>
+      </div>
+      <div class="bulk-toolbar" id="loansBulkToolbar" style="display:none;">
+        <span class="bulk-count" id="loansBulkCount">0 selected</span>
+        <button class="btn btn-primary btn-sm" onclick="processSelectedLoanDeductions()">Process Selected</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th class="checkbox-cell"><input type="checkbox" id="loansSelectAll" onchange="toggleSelectAllLoans(this.checked)"></th>
+            <th>Loan ID</th><th>Member</th><th>Balance</th><th>Monthly Deduction</th><th>Months Paid</th><th>Deduction Status</th><th>Action</th>
+          </tr></thead>
+          <tbody id="deductionsTableBody"><tr class="empty-row"><td colspan="8">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+        <button class="btn btn-outline btn-sm" onclick="processAllEligibleLoanDeductions()">Process Monthly Deductions for All Eligible Loans</button>
+      </div>
+    </div>
+
+    <div id="tab-history" class="tab-content" style="display:none;">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Loan ID</th><th>Member</th><th>Type</th><th>Amount</th><th>Status</th><th>Decision Date</th><th>Note</th></tr></thead>
+          <tbody id="historyTableBody"><tr class="empty-row"><td colspan="7">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="tab-reports" class="tab-content" style="display:none;">
+      <div class="admin-toolbar">
+        <div class="field" style="margin:0;">
+          <label for="reportFrom">From</label>
+          <input type="date" id="reportFrom">
+        </div>
+        <div class="field" style="margin:0;">
+          <label for="reportTo">To</label>
+          <input type="date" id="reportTo">
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="setReportRangeThisMonth()">This month</button>
+        <button class="btn btn-outline btn-sm" onclick="setReportRangeThisYear()">This year</button>
+        <button class="btn btn-primary btn-sm" onclick="generateReports()">Generate reports</button>
+      </div>
+      <p style="font-size:13px;color:var(--ink-soft);margin:-6px 0 20px;">For auditing: a financial statement for the period, every loan request received, and every approved loan grouped by type — each downloadable as PDF or Excel.</p>
+      <div id="reportsOutput">
+        <p class="lede">Choose a date range and click "Generate reports".</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Member management modal: all member-specific actions are kept in one place -->
+<div class="modal-overlay" id="memberDetailModal" hidden>
+  <div class="modal-card" style="max-width:900px;max-height:88vh;overflow:auto;">
+    <div class="modal-header-row"><h3 id="memberDetailTitle">Member Details</h3><button type="button" class="modal-close-x" onclick="closeMemberDetail()" aria-label="Close">&times;</button></div>
+    <div id="memberDetailContent">Loading…</div>
+  </div>
+</div>
+
+<!-- Loan detail modal: opens on top of Member Details when a loan is
+     clicked in the Loans list, instead of every loan's full ledger
+     being shown inline (which meant scrolling through them all). -->
+<div class="modal-overlay" id="loanDetailModal" hidden>
+  <div class="modal-card" style="max-width:520px;max-height:85vh;overflow:auto;">
+    <div class="modal-header-row"><h3 id="loanDetailTitle">Loan Details</h3><button type="button" class="modal-close-x" onclick="closeLoanDetail()" aria-label="Close">&times;</button></div>
+    <div id="loanDetailContent">Loading…</div>
+  </div>
+</div>
+
+<!-- Edit savings modal -->
+<div class="modal-overlay" id="editSavingsModal" hidden>
+  <div class="modal-card">
+    <div class="modal-header-row"><h3>Edit Member Savings</h3><button type="button" class="modal-close-x" onclick="closeEditSavingsModal()" aria-label="Close">&times;</button></div>
+    <p class="lede" id="editSavingsMemberName" style="font-size:13.5px;"></p>
+    <div class="field">
+      <label>Previous amount</label>
+      <input type="text" id="editSavingsPrevious" disabled>
+    </div>
+    <div class="field">
+      <label for="editSavingsNew">New amount (₦)</label>
+      <input type="number" id="editSavingsNew" min="0" step="1">
+    </div>
+    <div class="field">
+      <label for="editSavingsReason">Reason for adjustment</label>
+      <textarea id="editSavingsReason" placeholder="e.g. Correcting a missed contribution entered on 12 Aug"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeEditSavingsModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="submitEditSavings()">Save Adjustment</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit admin charges modal -->
+<div class="modal-overlay" id="editAdminChargeModal" hidden>
+  <div class="modal-card">
+    <div class="modal-header-row"><h3>Edit Administrative Charges</h3><button type="button" class="modal-close-x" onclick="closeEditAdminChargeModal()" aria-label="Close">&times;</button></div>
+    <p class="lede" id="editChargeMemberName" style="font-size:13.5px;"></p>
+    <div class="field">
+      <label>Previous amount</label>
+      <input type="text" id="editChargePrevious" disabled>
+    </div>
+    <div class="field">
+      <label for="editChargeNew">New amount (₦)</label>
+      <input type="number" id="editChargeNew" min="0" step="1">
+    </div>
+    <div class="field">
+      <label for="editChargeReason">Reason for correction</label>
+      <textarea id="editChargeReason" placeholder="e.g. Correcting a charge recorded twice on 12 Aug"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeEditAdminChargeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="submitEditAdminCharge()">Save Correction</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit payslip modal -->
+<div class="modal-overlay" id="editPayslipModal" hidden>
+  <div class="modal-card" style="max-width:600px;max-height:88vh;overflow:auto;">
+    <div class="modal-header-row"><h3>Edit Member Payslip</h3><button type="button" class="modal-close-x" onclick="closeEditPayslipModal()" aria-label="Close">&times;</button></div>
+    <p class="lede" id="editPayslipMemberName" style="font-size:13.5px;"></p>
+    <div class="field">
+      <label for="editPayslipMonth">Month</label>
+      <input type="month" id="editPayslipMonth" onchange="loadPayslipEditorForMonth()">
+    </div>
+    <p class="lede" id="editPayslipStatus" style="font-size:12.5px;"></p>
+    <div class="field">
+      <label for="editPayslipSavings">Savings contribution (₦)</label>
+      <input type="number" id="editPayslipSavings" min="0" step="1">
+    </div>
+    <div class="field">
+      <label for="editPayslipAdminCharge">Administrative charge (₦)</label>
+      <input type="number" id="editPayslipAdminCharge" min="0" step="1">
+    </div>
+    <div class="field">
+      <label>Loan deduction lines</label>
+      <div id="editPayslipLoanRows"></div>
+      <button type="button" class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="addPayslipLoanRow()">+ Add loan deduction line</button>
+    </div>
+    <div class="field">
+      <label for="editPayslipNote">Note to member (optional)</label>
+      <textarea id="editPayslipNote" placeholder="e.g. Corrected to match the July payroll schedule"></textarea>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button class="btn btn-danger btn-sm" onclick="resetPayslipOverrideClick()">Reset to computed values</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="closeEditPayslipModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="submitEditPayslip()">Save Payslip</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div id="createMemberModal" class="modal-overlay" hidden><div class="modal-card modal-card-wide"><div class="modal-header-row"><h3>Create New Member</h3><button type="button" class="modal-close-x" onclick="closeCreateMemberModal()" aria-label="Close">&times;</button></div><p class="lede" style="font-size:13px;margin-bottom:20px;">This adds them to the allowed member list. No email is sent — give the member their Al-Amanah No. and surname; they set up their own password at Member Login → "Set up your password". They'll appear under "Pending Registration" until they do.</p><form id="createMemberForm" onsubmit="submitCreateMember(event)">
+
+<div class="field-section">
+  <div class="field-section-title"><span class="field-section-icon">&#128100;</span>Member Identity</div>
+  <div class="field-grid">
+    <div class="field field-full">
+      <label for="cmNo">Al-Amanah No.</label>
+      <input id="cmNo" required placeholder="e.g. 302" oninput="document.getElementById('cmNoPreview').textContent = 'Will be saved as: ' + (this.value.trim() ? 'AL/' + this.value.trim().toUpperCase().replace(/^AL\\/?/,'') : 'AL/—');">
+      <div class="hint" id="cmNoPreview" style="color:var(--green-700);font-weight:600;">Will be saved as: AL/—</div>
+    </div>
+    <div class="field"><label for="cmFirst">First Name</label><input id="cmFirst" required></div>
+    <div class="field"><label for="cmSurname">Surname</label><input id="cmSurname" required></div>
+  </div>
+</div>
+
+<div class="field-section">
+  <div class="field-section-title"><span class="field-section-icon">&#9993;</span>Contact Details</div>
+  <div class="field-grid">
+    <div class="field"><label for="cmDept">Department</label><input id="cmDept"></div>
+    <div class="field"><label for="cmPhone">Phone</label><input id="cmPhone"></div>
+    <div class="field field-full">
+      <label for="cmEmail">Email (recommended)</label>
+      <input id="cmEmail" type="email">
+      <div class="hint">Without an email on file, this member won't be able to use "Forgot password" if they lose access — you'd need to add it later (Members → View member → Edit Details) or reset their password for them manually.</div>
+    </div>
+  </div>
+</div>
+
+<div class="field-section">
+  <div class="field-section-title"><span class="field-section-icon">&#128176;</span>Savings Setup</div>
+  <div class="field-grid">
+    <div class="field"><label for="cmMonthly">Monthly Savings Amount</label><input id="cmMonthly" type="number" min="0" step="0.01" value="0" oninput="suggestCmAdminCharge()"></div>
+    <div class="field"><label for="cmSavings">Opening Savings Balance</label><input id="cmSavings" type="number" min="0" step="0.01" value="0"></div>
+  </div>
+</div>
+
+<div class="field-section">
+  <div class="field-section-title"><span class="field-section-icon">&#128179;</span>Administrative Charges</div>
+  <div class="field-grid">
+    <div class="field field-full">
+      <label for="cmAdminCharge">Opening Admin Charges Balance</label>
+      <input id="cmAdminCharge" type="number" min="0" step="0.01" value="0" oninput="cmAdminChargeTouched = true;">
+      <div class="hint">Auto-suggested at 7.5% of the monthly savings amount as you type it above — edit freely if this member's opening figure is different.</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" onclick="closeCreateMemberModal()">Cancel</button><button class="btn btn-primary btn-sm" type="submit">Add Member</button></div></form><div id="createMemberMsg" class="hint" style="margin-top:12px;"></div></div></div>
+<div id="bulkMemberModal" class="modal-overlay" hidden><div class="modal-card modal-card-wide"><div class="modal-header-row"><h3>Bulk Upload Members</h3><button type="button" class="modal-close-x" onclick="closeBulkMemberModal()" aria-label="Close">&times;</button></div><p class="lede" style="font-size:13px;margin-bottom:12px;">Upload a CSV with columns: alamanah_no, first_name, surname, email, phone, department, monthly_savings_amount, savings_balance, total_admin_charges (optional — opening admin charges balance, defaults to 0 if left blank). No email is sent — each member sets up their own password at Member Login → "Set up your password" using their Al-Amanah No. and surname.</p><a class="btn btn-outline btn-sm" style="margin-bottom:18px;" href="bulk_members_template.csv" download="bulk_members_template.csv">&#8681; Download CSV Template</a><div class="field"><input id="bulkMemberFile" type="file" accept=".csv,text/csv"></div><div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" onclick="closeBulkMemberModal()">Cancel</button><button class="btn btn-primary btn-sm" onclick="submitBulkMembers()">Upload Members</button></div><div id="bulkMemberMsg" class="hint" style="margin-top:12px;"></div></div></div>
+
+<!-- Expunge member modal (Danger Zone) -->
+<div id="expungeMemberModal" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <div class="modal-header-row"><h3 style="color:var(--danger);">Expunge Member</h3><button type="button" class="modal-close-x" onclick="closeExpungeMemberModal()" aria-label="Close">&times;</button></div>
+    <p class="lede" id="expungeMemberName" style="font-size:13.5px;"></p>
+    <p class="lede" style="font-size:13px;">This permanently deletes their login and every record tied to them — savings, admin charges, loans, transactions, payslip history — with nothing left to restore. Their Al-Amanah No. becomes free for reuse. This cannot be undone.</p>
+    <div class="field">
+      <label for="expungeReason">Reason (required, kept in the permanent expunge log)</label>
+      <textarea id="expungeReason" placeholder="e.g. Member confirmed resignation from KwaraCAILS, cleared of all obligations"></textarea>
+    </div>
+    <div class="field">
+      <label for="expungeConfirmNo">Type this member's Al-Amanah No. to confirm</label>
+      <input id="expungeConfirmNo" type="text" oninput="checkExpungeConfirmMatch()" autocomplete="off">
+    </div>
+    <div class="form-error" id="expungeError" style="margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeExpungeMemberModal()">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="expungeSubmitBtn" disabled onclick="submitExpungeMember()">Permanently Expunge</button>
+    </div>
+  </div>
+</div>
+
+<!-- Set Officer Sign-in Email modal -->
+<div id="setOfficerEmailModal" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <div class="modal-header-row"><h3>Set Sign-in Email</h3><button type="button" class="modal-close-x" onclick="closeSetOfficerEmailModal()" aria-label="Close">&times;</button></div>
+    <p class="lede" style="font-size:13.5px;" id="setEmailMemberName"></p>
+    <p class="lede" style="font-size:13px;">This is the address they'll type into their officer/admin portal login screen, alongside their password. Their Al-Amanah No., savings, and loan history are untouched — this only changes what they sign in with.</p>
+    <input type="hidden" id="setEmailProfileId">
+    <div class="field">
+      <label for="setEmailInput">Sign-in email</label>
+      <input type="email" id="setEmailInput" placeholder="e.g. treasurer@kwaracails.org">
+    </div>
+    <div class="form-error" id="setEmailError"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeSetOfficerEmailModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="setEmailSubmitBtn" onclick="submitSetOfficerEmail()">Save Email</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Member Details modal -->
+<div id="editMemberDetailsModal" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <div class="modal-header-row"><h3>Edit Member Details</h3><button type="button" class="modal-close-x" onclick="closeEditMemberDetailsModal()" aria-label="Close">&times;</button></div>
+    <p class="lede" style="font-size:13.5px;" id="editDetailsName"></p>
+    <p class="lede" style="font-size:13px;">Corrects details entered incorrectly or left blank when this member was registered. Al-Amanah No. is edited separately from the Management Team tab (officers) or is fixed at registration for ordinary members.</p>
+    <input type="hidden" id="editDetailsProfileId">
+    <div class="field-grid">
+      <div class="field"><label for="editDetailsFirstName">First name</label><input id="editDetailsFirstName"></div>
+      <div class="field"><label for="editDetailsSurname">Surname</label><input id="editDetailsSurname"></div>
+      <div class="field"><label for="editDetailsDepartment">Department</label><input id="editDetailsDepartment"></div>
+      <div class="field"><label for="editDetailsPhone">Phone</label><input id="editDetailsPhone"></div>
+      <div class="field field-full">
+        <label for="editDetailsEmail">Email</label>
+        <input id="editDetailsEmail" type="email" placeholder="e.g. saad@example.com">
+        <div class="hint">Needed for "Forgot password" to work on the Member Login page. Leave blank to leave their current email (if any) unchanged.</div>
+      </div>
+    </div>
+    <div class="form-error" id="editDetailsError"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeEditMemberDetailsModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="editDetailsSubmitBtn" onclick="submitEditMemberDetails()">Save Details</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fix Al-Amanah No. modal (for officer profiles carrying a
+     placeholder number like TREAS-001 instead of their real one) -->
+<div id="fixAlamanahNoModal" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <div class="modal-header-row"><h3>Fix Al-Amanah No.</h3><button type="button" class="modal-close-x" onclick="closeFixAlamanahNoModal()" aria-label="Close">&times;</button></div>
+    <p class="lede" style="font-size:13.5px;" id="fixAlamanahMemberName"></p>
+    <p class="lede" style="font-size:13px;">Use this to correct an officer profile that was set up with a placeholder number (e.g. TREAS-001, ADMIN-001) instead of their real Al-Amanah No. This changes only the number — their savings, loans, and login are untouched. Once corrected, this is the number they'll use to log back in as an ordinary member if their role is ever reassigned to someone else.</p>
+    <input type="hidden" id="fixAlamanahProfileId">
+    <div class="field">
+      <label>Current Al-Amanah No.</label>
+      <input type="text" id="fixAlamanahCurrent" disabled>
+    </div>
+    <div class="field">
+      <label for="fixAlamanahInput">Real Al-Amanah No.</label>
+      <input type="text" id="fixAlamanahInput" placeholder="e.g. AL/014">
+    </div>
+    <div class="form-error" id="fixAlamanahError"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeFixAlamanahNoModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="fixAlamanahSubmitBtn" onclick="submitFixAlamanahNo()">Save</button>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-bottom">
+      <span>&copy; 2026 Al-Amanah Multi-Purpose Co-operative Society.</span>
+      <span>Affiliated with KwaraCAILS, Ilorin</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="js/supabaseClient.js?v=3"></script>
+<script src="js/route-guard.js?v=4"></script>
+<script src="js/data-live.js?v=22"></script>
+<script src="js/main.js?v=5"></script>
+<script>
+function togglePw(id, btn) {
+  const input = document.getElementById(id);
+  const showing = input.type === "text";
+  input.type = showing ? "password" : "text";
+  btn.textContent = showing ? "Show" : "Hide";
+}
+function watchCapsLock(inputId, warnId) {
+  const input = document.getElementById(inputId);
+  const warn = document.getElementById(warnId);
+  if (!input || !warn) return;
+  input.addEventListener("keyup", (e) => {
+    const caps = e.getModifierState && e.getModifierState("CapsLock");
+    warn.style.display = caps ? "block" : "none";
+  });
+}
+watchCapsLock("adminPass", "capsWarnAdmin");
+</script>
+<script src="js/admin.js?v=23"></script>
+<script src="js/reports.js?v=1"></script>
+</body>
+</html>

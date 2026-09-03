@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile | Al-Amanah MCS</title>
+<link rel="icon" href="assets/logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page-role="member">
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.jpg" alt="KwaraCAILS crest">
+      <div class="brand-text"><strong>Al-Amanah MCS</strong><span>Kwaracails &middot; Ilorin</span></div>
+    </a>
+    <nav class="nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="profile.html" class="active">My Profile</a>
+      <a href="apply-loan.html">Apply for Loan</a>
+      <a href="loan-info.html">Loan Products</a>
+      <a href="index.html" data-nav="home">Home</a>
+    </nav>
+    <div class="nav-cta">
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
+      <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
+    </div>
+  </div>
+</header>
+
+<section class="section-tight">
+  <div class="wrap" style="max-width:720px;">
+    <span class="eyebrow">Cooperative profile</span>
+    <h1>My Profile</h1>
+    <p class="lede">Your registered details on file with Al-Amanah MCS. To update any of this information,
+      contact the society office — profile edits are handled by the management committee to keep member
+      records accurate.</p>
+
+    <div class="ledger-card" style="margin-top:24px;">
+      <div class="ledger-head">
+        <div><span class="ledger-tag">Member record</span><h3 id="profName">—</h3></div>
+        <span class="pill pill-ok" id="profStatusPill">Active</span>
+      </div>
+      <div class="ledger-rows">
+        <div class="ledger-row"><span>Al-Amanah Number</span><span id="profAlaNo">—</span></div>
+        <div class="ledger-row"><span>Department</span><span id="profDept">—</span></div>
+        <div class="ledger-row"><span>Phone</span><span id="profPhone">—</span></div>
+        <div class="ledger-row"><span>Member since</span><span id="profJoined">—</span></div>
+        <div class="ledger-row"><span>Current savings balance</span><span id="profSavings">—</span></div>
+        <div class="ledger-row"><span>Savings last reviewed</span><span id="profReviewed">—</span></div>
+        <div class="ledger-row"><span>Next review due</span><span id="profNextReview">—</span></div>
+      </div>
+    </div>
+
+    <div class="form-note" style="margin-top:20px;">
+      Your savings continue to accrue for as long as you remain in active service with KwaraCAILS.
+      Savings status is reviewed by the management committee every six months, and contributions stop
+      automatically upon retirement or cessation of membership.
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-bottom">
+      <span>&copy; 2026 Al-Amanah Multi-Purpose Co-operative Society.</span>
+      <span>Affiliated with KwaraCAILS, Ilorin</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js?v=2"></script>
+<script src="js/data-live.js?v=22"></script>
+<script src="js/route-guard.js?v=4"></script>
+<script src="js/main.js?v=5"></script>
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const profile = await requireMemberSession();
+  if (!profile) return;
+
+  document.getElementById("profName").textContent = `${profile.first_name} ${profile.surname}`;
+  document.getElementById("profAlaNo").textContent = profile.alamanah_no;
+  document.getElementById("profDept").textContent = profile.department || "—";
+  document.getElementById("profPhone").textContent = profile.phone || "—";
+  document.getElementById("profJoined").textContent = formatDate(profile.joined);
+  document.getElementById("profSavings").textContent = formatNaira(profile.savings_balance);
+  document.getElementById("profReviewed").textContent = formatDate(profile.savings_last_reviewed);
+
+  const nextReview = nextSavingsReviewDate(profile.savings_last_reviewed);
+  document.getElementById("profNextReview").textContent = formatDate(nextReview.toISOString().slice(0, 10));
+
+  const pill = document.getElementById("profStatusPill");
+  if (profile.status === "active") { pill.textContent = "Active"; pill.className = "pill pill-ok"; }
+  else if (profile.status === "retired") { pill.textContent = "Retired"; pill.className = "pill pill-wait"; }
+  else { pill.textContent = "Dismissed"; pill.className = "pill pill-bad"; }
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await logoutUser();
+    window.location.href = "index.html?loggedout=1";
+  });
+});
+</script>
+</body>
+</html>

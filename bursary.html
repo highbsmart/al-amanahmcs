@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bursary Officer Portal | Al-Amanah MCS</title>
+<link rel="icon" href="assets/logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page-role="bursary" data-officer-title="Bursary Officer">
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.jpg" alt="KwaraCAILS crest">
+      <div class="brand-text"><strong>Al-Amanah MCS</strong><span>Kwaracails &middot; Ilorin</span></div>
+    </a>
+    <nav class="nav-links">
+      <a href="index.html" data-nav="home">Home</a>
+    </nav>
+    <div class="nav-cta">
+      <button class="btn btn-outline btn-sm" id="officerViewAsMemberBtn" style="display:none;">View as Member</button>
+      <button class="btn btn-outline btn-sm" id="reportProblemBtn" style="display:none;">Report Problem</button>
+      <button class="btn btn-ghost btn-sm" id="officerLogoutBtn" style="display:none;">Log out</button>
+      <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
+    </div>
+  </div>
+</header>
+
+<!-- Shown briefly while we check whether there's already a
+     signed-in session — prevents the login form from flashing on
+     screen for someone who's actually already signed in. -->
+<div class="auth-shell" id="officerSessionChecking">
+  <div class="auth-card" style="text-align:center;">
+    <div class="session-spinner"></div>
+    <p class="lede" style="margin:14px 0 0;">Loading your bursary portal…</p>
+  </div>
+</div>
+
+<!-- Bursary Officer login -->
+<div class="auth-shell" id="officerLoginShell" style="display:none;">
+  <div class="auth-card">
+    <div class="brand"><img src="assets/logo.jpg" alt="Crest" style="width:52px;height:52px;"></div>
+    <h1>Bursary Officer Portal</h1>
+    <p class="lede">Restricted to the Al-Amanah Bursary Officer.</p>
+    <div class="form-error" id="officerLoginError">Incorrect email or password.</div>
+    <form id="officerLoginForm">
+      <div class="field"><label for="officerUser">Bursary email</label><input type="email" id="officerUser" required autocomplete="username"></div>
+      <div class="field"><label for="officerPass">Password</label>
+        <div style="position:relative;">
+          <input type="password" id="officerPass" required autocomplete="current-password" style="padding-right:70px;">
+          <button type="button" onclick="togglePw('officerPass',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--green-700);font-size:12.5px;font-weight:600;cursor:pointer;">Show</button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="officerLoginSubmit">Log in to bursary portal</button>
+    </form>
+    <div class="form-note">Bursary Officer accounts are created directly in Supabase by your developer. There is no self-signup for officer access.</div>
+  </div>
+</div>
+
+<!-- Bursary Officer panel -->
+<div id="officerPanel" style="display:none;">
+  <section class="dash-header">
+    <div class="wrap">
+      <div class="dash-welcome">
+        <span>Management Committee</span>
+        <h1>Welcome, <span id="officerWelcomeName"></span></h1>
+        <p style="color:rgba(247,242,228,.75);margin:0;">Bursary Officer workspace &mdash; Al-Amanah MCS</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap dash-body">
+    <div class="stat-strip">
+      <div class="stat-box">
+        <span>Applications awaiting vetting</span>
+        <strong id="bursaryQueueCount">–</strong>
+      </div>
+    </div>
+
+    <div class="form-note" style="margin-bottom:24px;">
+      <strong>The 1/3 rule</strong><br>
+      After all deductions (existing loan repayments + monthly savings + this new loan's repayment) are taken from
+      a member's Net Pay, what's left must still be at least one-third of their Gross Pay. This is enforced
+      automatically: an application cannot be marked eligible if it would breach this.
+    </div>
+
+    <h2 style="margin-bottom:14px;">Applications Awaiting Vetting</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Member</th><th>Type</th><th>Amount</th><th>Applied</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="bursaryQueueBody"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <h2 style="margin:32px 0 14px;">Your Vetting History</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>When</th><th>Member</th><th>Loan</th><th>Result</th><th>Net Pay After / Required Min.</th><th>Note</th></tr></thead>
+        <tbody id="bursaryHistoryBody"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Vetting modal -->
+<div class="modal-overlay" id="vettingModal" hidden>
+  <div class="modal-card" style="max-width:640px;max-height:88vh;overflow:auto;">
+    <div class="modal-header-row"><h3>Loan Application &mdash; Bursary Vetting</h3><button type="button" class="modal-close-x" onclick="closeVettingModal()" aria-label="Close">&times;</button></div>
+    <div id="vettingModalBody"></div>
+  </div>
+</div>
+
+<!-- Report Problem modal (shared markup across all officer portals) -->
+<div class="modal-overlay" id="reportProblemModal" hidden>
+  <div class="modal-card" style="max-width:520px;">
+    <div class="modal-header-row"><h3>Report a Problem</h3><button type="button" class="modal-close-x" onclick="closeReportProblemModal()" aria-label="Close">&times;</button></div>
+    <form id="reportProblemForm">
+      <div class="field">
+        <label for="reportProblemTitle">Problem title</label>
+        <input type="text" id="reportProblemTitle" required placeholder="e.g. Unable to complete vetting">
+      </div>
+      <div class="field">
+        <label for="reportProblemDescription">Description</label>
+        <textarea id="reportProblemDescription" rows="4" required placeholder="What happened, and what were you trying to do?"></textarea>
+      </div>
+      <div class="field">
+        <label for="reportProblemSeverity">Priority</label>
+        <select id="reportProblemSeverity">
+          <option value="low">Low</option>
+          <option value="normal" selected>Normal</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="form-error" id="reportProblemError"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeReportProblemModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="reportProblemSubmitBtn">Submit Report</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/data-live.js?v=22"></script>
+<script src="js/route-guard.js?v=4"></script>
+<script src="js/main.js?v=5"></script>
+<script src="js/officer-portal.js?v=4"></script>
+<script src="js/bursary.js"></script>
+</body>
+</html>

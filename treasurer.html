@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Treasurer Portal | Al-Amanah MCS</title>
+<link rel="icon" href="assets/logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page-role="treasurer" data-officer-title="Treasurer">
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.jpg" alt="KwaraCAILS crest">
+      <div class="brand-text"><strong>Al-Amanah MCS</strong><span>Kwaracails &middot; Ilorin</span></div>
+    </a>
+    <nav class="nav-links">
+      <a href="index.html" data-nav="home">Home</a>
+    </nav>
+    <div class="nav-cta">
+      <button class="btn btn-outline btn-sm" id="officerViewAsMemberBtn" style="display:none;">View as Member</button>
+      <button class="btn btn-outline btn-sm" id="reportProblemBtn" style="display:none;">Report Problem</button>
+      <button class="btn btn-ghost btn-sm" id="officerLogoutBtn" style="display:none;">Log out</button>
+      <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
+    </div>
+  </div>
+</header>
+
+<!-- Shown briefly while we check whether there's already a
+     signed-in session — e.g. right after "Return to Treasurer Portal"
+     navigates here. Prevents the login form from flashing on screen
+     for someone who's actually already signed in. -->
+<div class="auth-shell" id="officerSessionChecking">
+  <div class="auth-card" style="text-align:center;">
+    <div class="session-spinner"></div>
+    <p class="lede" style="margin:14px 0 0;">Loading your treasurer portal…</p>
+  </div>
+</div>
+
+<!-- Treasurer login -->
+<div class="auth-shell" id="officerLoginShell" style="display:none;">
+  <div class="auth-card">
+    <div class="brand"><img src="assets/logo.jpg" alt="Crest" style="width:52px;height:52px;"></div>
+    <h1>Treasurer Portal</h1>
+    <p class="lede">Restricted to the Al-Amanah Treasurer.</p>
+    <div class="form-error" id="officerLoginError">Incorrect email or password.</div>
+    <form id="officerLoginForm">
+      <div class="field"><label for="officerUser">Treasurer email</label><input type="email" id="officerUser" required autocomplete="username"></div>
+      <div class="field"><label for="officerPass">Password</label>
+        <div style="position:relative;">
+          <input type="password" id="officerPass" required autocomplete="current-password" style="padding-right:70px;">
+          <button type="button" onclick="togglePw('officerPass',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--green-700);font-size:12.5px;font-weight:600;cursor:pointer;">Show</button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="officerLoginSubmit">Log in to treasurer portal</button>
+    </form>
+    <div class="form-note">Treasurer accounts are created directly in Supabase by your developer. There is no self-signup for officer access.</div>
+  </div>
+</div>
+
+<!-- Treasurer panel -->
+<div id="officerPanel" style="display:none;">
+  <section class="dash-header">
+    <div class="wrap">
+      <div class="dash-welcome">
+        <span>Management Committee</span>
+        <h1>Welcome, <span id="officerWelcomeName"></span></h1>
+        <p style="color:rgba(247,242,228,.75);margin:0;">Treasurer workspace &mdash; Al-Amanah MCS</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap dash-body">
+    <div class="stat-strip">
+      <div class="stat-card">
+        <div style="font-size:13px;color:var(--ink-soft);">Applications requiring action</div>
+        <div style="font-size:1.3rem;font-weight:700;margin-top:6px;" id="treasurerQueueCount">–</div>
+      </div>
+    </div>
+
+    <h2 style="margin-bottom:14px;">Applications Requiring Assessment</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Member</th><th>Type</th><th>Amount</th><th>Applied</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="treasurerQueueBody"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <h2 style="margin:32px 0 14px;">Pending Offset Payments to Confirm</h2>
+    <p class="hint" style="margin-bottom:14px;">These members have asked to pay off a loan directly to the cooperative's account instead of online. Only confirm once you've verified the money actually arrived.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Member</th><th>Loans</th><th>Amount</th><th>Requested</th><th>Reference</th><th>Action</th></tr></thead>
+        <tbody id="manualOffsetQueueBody"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <h2 style="margin:32px 0 14px;">Your Assessment History</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>When</th><th>Member</th><th>Loan</th><th>Eligibility</th><th>Note</th></tr></thead>
+        <tbody id="treasurerHistoryBody"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Manual offset confirmation modal -->
+<div class="modal-overlay" id="manualOffsetConfirmModal" hidden>
+  <div class="modal-card" style="max-width:520px;">
+    <div class="modal-header-row"><h3>Confirm Payment Received</h3><button type="button" class="modal-close-x" onclick="closeManualOffsetConfirm()" aria-label="Close">&times;</button></div>
+    <form id="manualOffsetConfirmForm">
+      <div class="field">
+        <label for="manualOffsetNote">How was this payment received?</label>
+        <textarea id="manualOffsetNote" rows="3" required placeholder="e.g. Bank transfer to cooperative account, teller ref 00123, received 29 Aug 2026"></textarea>
+      </div>
+      <div class="form-error" id="manualOffsetConfirmError"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeManualOffsetConfirm()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="manualOffsetConfirmSubmitBtn">Confirm &amp; Close Loan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Assessment modal -->
+<div class="modal-overlay" id="assessmentModal" hidden>
+  <div class="modal-card" style="max-width:640px;max-height:88vh;overflow:auto;">
+    <div class="modal-header-row"><h3>Loan Application Assessment</h3><button type="button" class="modal-close-x" onclick="closeAssessmentModal()" aria-label="Close">&times;</button></div>
+    <div id="assessmentModalBody"></div>
+  </div>
+</div>
+
+<!-- Report Problem modal (shared markup across all officer portals) -->
+<div class="modal-overlay" id="reportProblemModal" hidden>
+  <div class="modal-card" style="max-width:520px;">
+    <div class="modal-header-row"><h3>Report a Problem</h3><button type="button" class="modal-close-x" onclick="closeReportProblemModal()" aria-label="Close">&times;</button></div>
+    <form id="reportProblemForm">
+      <div class="field">
+        <label for="reportProblemTitle">Problem title</label>
+        <input type="text" id="reportProblemTitle" required placeholder="e.g. Unable to complete financial assessment">
+      </div>
+      <div class="field">
+        <label for="reportProblemDescription">Description</label>
+        <textarea id="reportProblemDescription" rows="4" required placeholder="What happened, and what were you trying to do?"></textarea>
+      </div>
+      <div class="field">
+        <label for="reportProblemSeverity">Priority</label>
+        <select id="reportProblemSeverity">
+          <option value="low">Low</option>
+          <option value="normal" selected>Normal</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="form-error" id="reportProblemError"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeReportProblemModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="reportProblemSubmitBtn">Submit Report</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/data-live.js?v=22"></script>
+<script src="js/route-guard.js?v=4"></script>
+<script src="js/main.js?v=5"></script>
+<script src="js/officer-portal.js?v=4"></script>
+<script src="js/treasurer.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+SAFE UPDATE INSTRUCTIONS
+
+1. Open Supabase Dashboard.
+2. Go to SQL Editor.
+3. Click New Query.
+4. Open: migration_safe_loan_controls.sql
+5. Copy ALL of its contents into the new query.
+6. Click Run.
+
+Do NOT run the full schema.sql again on an existing database. Running schema.sql again can cause errors such as "policy already exists".
+
+If the safe migration reports an error, take a screenshot of the FULL error and send it back.
