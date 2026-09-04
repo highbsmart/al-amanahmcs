@@ -9,9 +9,9 @@
 --
 -- Loan workflow becomes:
 --   New application -> awaiting_bursary
---     Bursary vets (checks that Net Pay, after all deductions —
---     existing loans + savings + this new loan — would still be
---     at least 1/3 of Gross Pay):
+--     Bursary vets (checks that total deductions — existing
+--     Al-Amanah loans + monthly savings + 7.5% savings admin
+--     charge + this new loan — do not exceed 1/3 of Gross Pay):
 --       eligible               -> awaiting_treasurer   (unchanged from here on)
 --       not_eligible           -> declined immediately (hard gate —
 --                                  the system will not let Bursary
@@ -178,11 +178,12 @@ end $$;
 alter table loan_vettings add column if not exists net_pay_after_deductions numeric;
 
 -- ---------------------------------------------------------
--- 5. Read-only preview for the Bursary Officer, mirroring
---    get_loan_financial_summary but centred on the 1/3 rule —
---    what this loan would add to the member's total deductions,
---    and whether that fits under 1/3 of Gross Pay AND 1/3 of Net
---    Pay (both must hold; the stricter of the two governs).
+-- 5. Read-only preview for the Bursary Officer — the 1/3 rule:
+--    (existing Al-Amanah loan repayments) + (monthly savings) +
+--    (7.5% savings admin charge) + (this new loan's own repayment),
+--    all added together, must not exceed one-third of Gross Pay.
+--    Net Pay is shown for reference only — it does not enter this
+--    calculation.
 -- ---------------------------------------------------------
 create or replace function public.get_bursary_financial_summary(p_loan_id text)
 returns jsonb
@@ -210,7 +211,9 @@ begin
   from loans
   where member_id = v_loan.member_id and status = 'approved' and id <> p_loan_id;
 
-  v_existing := v_existing + coalesce(v_profile.monthly_savings_amount, 0);
+  v_existing := v_existing
+    + coalesce(v_profile.monthly_savings_amount, 0)
+    + round(coalesce(v_profile.monthly_savings_amount, 0) * 0.075);
 
   v_proposed := case when v_loan.duration > 0
     then round((v_loan.amount + coalesce(v_loan.admin_charge, 0)) / v_loan.duration)
@@ -234,16 +237,14 @@ begin
     'proposed_monthly_deduction', v_proposed,
     'total_projected_deductions', v_total,
     'one_third_gross_limit', case when v_profile.gross_pay is not null then round(v_profile.gross_pay / 3.0) else null end,
-    -- Net Pay (from the member's actual payslip) already has ALL
-    -- current deductions subtracted from it — including this
-    -- member's existing Al-Amanah savings and loan repayments.
-    -- Only the NEW loan being vetted here further reduces it; the
-    -- old (existing) deductions must not be subtracted a second
-    -- time or every member looks far more over-limit than reality.
-    'net_pay_after_deductions', case when v_profile.net_pay is not null then v_profile.net_pay - v_proposed else null end,
+    -- Net Pay after this loan is shown only for the Bursary
+    -- Officer's own reference/cross-check against the payslip —
+    -- it does not drive the eligibility decision, which is based
+    -- solely on total deductions vs. 1/3 of Gross Pay below.
+    'net_pay_after_deductions', case when v_profile.net_pay is not null then v_profile.net_pay - v_total else null end,
     'within_limit', case
-      when v_profile.gross_pay is null or v_profile.net_pay is null then null
-      else (v_profile.net_pay - v_proposed) >= round(v_profile.gross_pay / 3.0)
+      when v_profile.gross_pay is null then null
+      else v_total <= round(v_profile.gross_pay / 3.0)
     end
   );
 end;
@@ -254,11 +255,12 @@ $$;
 --    optionally record/update the member's salary in the same
 --    call (p_gross_pay / p_net_pay), or rely on figures already
 --    on file. Marking an application "eligible" is REJECTED
---    server-side if the total projected deduction would exceed
---    1/3 of Gross Pay OR 1/3 of Net Pay — the Bursary Officer
---    cannot override this by choice of dropdown value; the
---    system itself will not allow it, per the deduction ceiling
---    the cooperative applies to every member.
+--    server-side if total deductions (existing Al-Amanah loan
+--    repayments + monthly savings + 7.5% savings admin charge +
+--    this new loan's own repayment) would exceed 1/3 of Gross
+--    Pay — the Bursary Officer cannot override this by choice of
+--    dropdown value; the system itself will not allow it, per the
+--    deduction ceiling the cooperative applies to every member.
 -- ---------------------------------------------------------
 create or replace function public.submit_bursary_vetting(
   p_loan_id text,
@@ -321,7 +323,9 @@ begin
   select coalesce(sum(monthly_deduction), 0) into v_existing
   from loans
   where member_id = v_loan.member_id and status = 'approved' and id <> p_loan_id;
-  v_existing := v_existing + coalesce(v_profile.monthly_savings_amount, 0);
+  v_existing := v_existing
+    + coalesce(v_profile.monthly_savings_amount, 0)
+    + round(coalesce(v_profile.monthly_savings_amount, 0) * 0.075);
 
   v_proposed := case when v_loan.duration > 0
     then round((v_loan.amount + coalesce(v_loan.admin_charge, 0)) / v_loan.duration)
@@ -329,26 +333,24 @@ begin
   end;
   v_total := v_existing + v_proposed;
   v_limit := round(v_gross / 3.0);
-  -- Net Pay already reflects every deduction currently on the
-  -- member's payslip, including their existing Al-Amanah savings
-  -- and loan repayments (v_existing, above, is kept only so the
-  -- Bursary Officer can cross-check it against the "Al-Amanah
-  -- Saving"/"Al-Amanah Ded" lines on the real payslip). Only the
-  -- NEW loan's own deduction (v_proposed) further reduces take-home
-  -- pay from here — subtracting v_existing again would double-count
-  -- deductions the payslip has already applied.
-  v_remaining_net := v_net - v_proposed;
-  v_within := v_remaining_net >= v_limit;
+  -- The 1/3 rule: existing Al-Amanah loan repayments + monthly
+  -- savings + the 7.5% savings admin charge + this new loan's own
+  -- repayment, all added together, must not exceed one-third of
+  -- Gross Pay. Net Pay is recorded and shown for the Bursary
+  -- Officer's reference/cross-check against the payslip, but does
+  -- not itself drive this decision.
+  v_remaining_net := v_net - v_total;
+  v_within := v_total <= v_limit;
 
-  -- The hard gate: Bursary cannot mark an application eligible if,
-  -- after this loan's deduction is added, the member's Net Pay
-  -- would fall below one-third of their Gross Pay. The system
-  -- itself enforces this — it cannot be overridden by dropdown
-  -- choice alone.
+  -- The hard gate: Bursary cannot mark an application eligible if
+  -- total deductions would exceed one-third of Gross Pay. The
+  -- system itself enforces this — it cannot be overridden by
+  -- dropdown choice alone.
   if p_eligibility_status = 'eligible' and not v_within then
-    raise exception 'This application cannot be marked eligible: adding this loan''s deduction of % would bring Net Pay down to %, which is below one-third of Gross Pay (%).',
+    raise exception 'This application cannot be marked eligible: total deductions of % (existing % + this loan %) exceed one-third of Gross Pay (%).',
+      to_char(v_total, 'FM999,999,999'),
+      to_char(v_existing, 'FM999,999,999'),
       to_char(v_proposed, 'FM999,999,999'),
-      to_char(round(v_remaining_net), 'FM999,999,999'),
       to_char(v_limit, 'FM999,999,999');
   end if;
 
@@ -370,7 +372,7 @@ begin
     update loans set
       status = 'declined',
       date_decision = current_date,
-      decline_reason = coalesce(p_note, 'This loan would bring Net Pay below one-third of Gross Pay (Bursary vetting).'),
+      decline_reason = coalesce(p_note, 'Total deductions would exceed one-third of Gross Pay (Bursary vetting).'),
       workflow_status = v_new_workflow_status
     where id = p_loan_id;
   else

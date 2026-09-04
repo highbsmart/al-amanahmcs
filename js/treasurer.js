@@ -86,7 +86,7 @@ async function openAssessmentModal(loanId) {
         ${vetting
           ? `Result: ${vettingBadge(vetting.eligibility_status)}<br>
              Gross Pay: ${formatNaira(vetting.gross_pay)} &middot; Net Pay: ${formatNaira(vetting.net_pay)}<br>
-             This loan's deduction (${formatNaira(vetting.proposed_monthly_deduction)}) would bring Net Pay to ${formatNaira(vetting.net_pay_after_deductions)}, which must stay at/above 1/3 of Gross Pay (${formatNaira(vetting.one_third_gross_limit)})<br>
+             Total deductions if approved: ${formatNaira(vetting.total_projected_deductions)} (existing ${formatNaira(vetting.existing_monthly_deductions)} + this loan ${formatNaira(vetting.proposed_monthly_deduction)}) against a 1/3-of-Gross-Pay limit of ${formatNaira(vetting.one_third_gross_limit)}<br>
              Note: ${vetting.note}`
           : `<span class="pill pill-wait">NOT YET SUBMITTED</span>`}
       </div>

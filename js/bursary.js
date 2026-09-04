@@ -68,10 +68,11 @@ async function openVettingModal(loanId) {
       <div class="stat-strip" style="grid-template-columns:1fr 1fr;margin-bottom:20px;">
         <div class="stat-card"><div class="hint">Member</div><div style="font-weight:700;">${summary.member_name}</div><div class="hint">${summary.alamanah_no}${summary.department ? " &middot; " + summary.department : ""}</div></div>
         <div class="stat-card"><div class="hint">Request</div><div style="font-weight:700;">${capitalize(summary.loan_type)} Loan — ${formatNaira(summary.amount)}</div><div class="hint">${summary.duration} months</div></div>
-        <div class="stat-card"><div class="hint">Existing Cooperative Deductions (this system's records)</div><div style="font-weight:700;">${formatNaira(summary.existing_monthly_deductions)}</div><div class="hint">Cross-check vs. "Al-Amanah Saving" + "Al-Amanah Ded" on the member's real payslip — already inside their current Net Pay below</div></div>
-        <div class="stat-card"><div class="hint">This Loan's Monthly Deduction</div><div style="font-weight:700;">${formatNaira(summary.proposed_monthly_deduction)}</div><div class="hint">The only new amount that further reduces Net Pay</div></div>
-        <div class="stat-card"><div class="hint">Current Net Pay (from payslip)</div><div style="font-weight:700;">${summary.net_pay != null ? formatNaira(summary.net_pay) : "—"}</div><div class="hint">Already reflects all current deductions</div></div>
-        <div class="stat-card"><div class="hint">Net Pay If This Loan Is Approved</div><div style="font-weight:700;">${summary.net_pay_after_deductions != null ? formatNaira(summary.net_pay_after_deductions) : "—"}</div><div class="hint">Must stay at/above 1/3 of Gross Pay</div></div>
+        <div class="stat-card"><div class="hint">Existing Cooperative Deductions</div><div style="font-weight:700;">${formatNaira(summary.existing_monthly_deductions)}</div><div class="hint">Active loans + monthly savings + 7.5% savings admin charge</div></div>
+        <div class="stat-card"><div class="hint">This Loan's Monthly Deduction</div><div style="font-weight:700;">${formatNaira(summary.proposed_monthly_deduction)}</div></div>
+        <div class="stat-card"><div class="hint">Total Deductions If Approved</div><div style="font-weight:700;">${formatNaira(summary.total_projected_deductions)}</div><div class="hint">Must not exceed 1/3 of Gross Pay</div></div>
+        <div class="stat-card"><div class="hint">1/3 of Gross Pay (the ceiling)</div><div style="font-weight:700;">${summary.one_third_gross_limit != null ? formatNaira(summary.one_third_gross_limit) : "—"}</div></div>
+        <div class="stat-card"><div class="hint">Net Pay (from payslip, for reference)</div><div style="font-weight:700;">${summary.net_pay != null ? formatNaira(summary.net_pay) : "—"}</div></div>
         <div class="stat-card"><div class="hint">Result So Far</div><div style="font-weight:700;">${limitBadge(summary.within_limit)}</div></div>
       </div>
       <p class="hint" style="margin-bottom:16px;"><strong>Purpose:</strong> ${summary.purpose}</p>
@@ -130,8 +131,8 @@ async function openVettingModal(loanId) {
 function limitBadge(withinLimit) {
   if (withinLimit === null || withinLimit === undefined) return `<span class="pill pill-wait">Salary not on file</span>`;
   return withinLimit
-    ? `<span class="pill pill-ok">Net pay stays at/above 1/3 of gross</span>`
-    : `<span class="pill pill-bad">Net pay would fall below 1/3 of gross</span>`;
+    ? `<span class="pill pill-ok">Within 1/3 of Gross Pay</span>`
+    : `<span class="pill pill-bad">Exceeds 1/3 of Gross Pay</span>`;
 }
 
 async function handleSalarySave(e) {
@@ -223,7 +224,7 @@ async function loadBursaryHistory() {
         <td>${v.loans?.profiles ? `${v.loans.profiles.first_name} ${v.loans.profiles.surname}` : v.loan_id}</td>
         <td>${v.loans ? `${capitalize(v.loans.type)} — ${formatNaira(v.loans.amount)}` : "—"}</td>
         <td>${eligibilityPillFor(v.eligibility_status)}</td>
-        <td class="mono-cell" style="font-size:12px;">Net after: ${formatNaira(v.net_pay_after_deductions)} / needs ≥ ${formatNaira(v.one_third_gross_limit)}</td>
+        <td class="mono-cell" style="font-size:12px;">${formatNaira(v.total_projected_deductions)} / limit ${formatNaira(v.one_third_gross_limit)}</td>
         <td>${v.note}</td>
       </tr>
     `).join("");
