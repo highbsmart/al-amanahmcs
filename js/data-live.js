@@ -261,19 +261,19 @@ async function getBursaryFinancialSummary(loanId) {
   return data;
 }
 
-async function submitBursaryVetting(loanId, eligibilityStatus, note, grossPay, netPay) {
+async function submitBursaryVetting(loanId, eligibilityStatus, note, grossPay, otherMonthlyDeductions) {
   const { error } = await supabaseClient.rpc("submit_bursary_vetting", {
     p_loan_id: loanId,
     p_eligibility_status: eligibilityStatus,
     p_note: note,
     p_gross_pay: grossPay ?? null,
-    p_net_pay: netPay ?? null
+    p_other_monthly_deductions: otherMonthlyDeductions ?? null
   });
   if (error) throw error;
 }
 
-async function setMemberSalary(memberId, grossPay, netPay) {
-  const { error } = await supabaseClient.rpc("set_member_salary", { p_member_id: memberId, p_gross_pay: grossPay, p_net_pay: netPay });
+async function setMemberSalary(memberId, grossPay, otherMonthlyDeductions) {
+  const { error } = await supabaseClient.rpc("set_member_salary", { p_member_id: memberId, p_gross_pay: grossPay, p_other_monthly_deductions: otherMonthlyDeductions });
   if (error) throw error;
 }
 

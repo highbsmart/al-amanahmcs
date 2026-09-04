@@ -4,11 +4,13 @@
    window.onOfficerReady, which fires once login succeeds.
 
    Vets a loan applicant's financial capacity against the
-   cooperative's 1/3 rule — total monthly deductions (existing
-   loans + savings + the new loan) must not exceed one-third of
-   Gross Pay OR one-third of Net Pay — BEFORE the application
-   reaches the Treasurer. See supabase/migration_bursary_officer_role.sql
-   for the server-side enforcement of this rule.
+   cooperative's 1/3 rule: Net Pay is calculated (Gross Pay minus
+   Other, non-cooperative deductions), then existing Al-Amanah
+   obligations and the new loan's own deduction are subtracted —
+   what's left must be at least one-third of Gross Pay. BEFORE the
+   application reaches the Treasurer. See
+   supabase/migration_bursary_officer_role.sql for the server-side
+   enforcement of this rule.
    ========================================================= */
 window.onOfficerReady = function () {
   loadBursaryQueue();
@@ -62,17 +64,17 @@ async function openVettingModal(loanId) {
 
   try {
     const summary = await getBursaryFinancialSummary(loanId);
-    const hasSalary = summary.gross_pay != null && summary.net_pay != null;
+    const hasSalary = summary.gross_pay != null && summary.other_monthly_deductions != null;
 
     box.innerHTML = `
       <div class="stat-strip" style="grid-template-columns:1fr 1fr;margin-bottom:20px;">
         <div class="stat-card"><div class="hint">Member</div><div style="font-weight:700;">${summary.member_name}</div><div class="hint">${summary.alamanah_no}${summary.department ? " &middot; " + summary.department : ""}</div></div>
         <div class="stat-card"><div class="hint">Request</div><div style="font-weight:700;">${capitalize(summary.loan_type)} Loan — ${formatNaira(summary.amount)}</div><div class="hint">${summary.duration} months</div></div>
+        <div class="stat-card"><div class="hint">Net Pay (calculated: Gross − Other Deductions)</div><div style="font-weight:700;">${summary.net_pay != null ? formatNaira(summary.net_pay) : "—"}</div><div class="hint">Before cooperative deductions</div></div>
         <div class="stat-card"><div class="hint">Existing Cooperative Deductions</div><div style="font-weight:700;">${formatNaira(summary.existing_monthly_deductions)}</div><div class="hint">Active loans + monthly savings + 7.5% savings admin charge</div></div>
         <div class="stat-card"><div class="hint">This Loan's Monthly Deduction</div><div style="font-weight:700;">${formatNaira(summary.proposed_monthly_deduction)}</div></div>
-        <div class="stat-card"><div class="hint">Total Deductions If Approved</div><div style="font-weight:700;">${formatNaira(summary.total_projected_deductions)}</div><div class="hint">Must not exceed 1/3 of Gross Pay</div></div>
-        <div class="stat-card"><div class="hint">1/3 of Gross Pay (the ceiling)</div><div style="font-weight:700;">${summary.one_third_gross_limit != null ? formatNaira(summary.one_third_gross_limit) : "—"}</div></div>
-        <div class="stat-card"><div class="hint">Net Pay (from payslip, for reference)</div><div style="font-weight:700;">${summary.net_pay != null ? formatNaira(summary.net_pay) : "—"}</div></div>
+        <div class="stat-card"><div class="hint">Net Pay If This Loan Is Approved</div><div style="font-weight:700;">${summary.net_pay_after_deductions != null ? formatNaira(summary.net_pay_after_deductions) : "—"}</div><div class="hint">Must be at least 1/3 of Gross Pay</div></div>
+        <div class="stat-card"><div class="hint">1/3 of Gross Pay (the minimum required)</div><div style="font-weight:700;">${summary.one_third_gross_limit != null ? formatNaira(summary.one_third_gross_limit) : "—"}</div></div>
         <div class="stat-card"><div class="hint">Result So Far</div><div style="font-weight:700;">${limitBadge(summary.within_limit)}</div></div>
       </div>
       <p class="hint" style="margin-bottom:16px;"><strong>Purpose:</strong> ${summary.purpose}</p>
@@ -82,14 +84,15 @@ async function openVettingModal(loanId) {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="field" style="margin-bottom:0;">
             <label for="salaryGross">Gross Pay (₦/month)</label>
-            <input type="number" id="salaryGross" min="0" step="1" value="${summary.gross_pay ?? ""}" placeholder="e.g. 180000">
+            <input type="number" id="salaryGross" min="0" step="1" value="${summary.gross_pay ?? ""}" placeholder="e.g. 158503">
           </div>
           <div class="field" style="margin-bottom:0;">
-            <label for="salaryNet">Net Pay (₦/month)</label>
-            <input type="number" id="salaryNet" min="0" step="1" value="${summary.net_pay ?? ""}" placeholder="e.g. 132000">
+            <label for="salaryOther">Other Deductions (₦/month)</label>
+            <input type="number" id="salaryOther" min="0" step="1" value="${summary.other_monthly_deductions ?? ""}" placeholder="e.g. 55009">
           </div>
         </div>
-        ${summary.salary_updated_at ? `<p class="hint" style="margin-top:8px;">Last updated ${summary.salary_updated_at}.</p>` : `<p class="hint" style="margin-top:8px;">Not yet on file — enter both figures from the salary scale before vetting.</p>`}
+        <p class="hint" style="margin-top:6px;">Other Deductions = everything on the payslip that is NOT Al-Amanah — PAYE, Union Dues, NHF, ID Card, Water Rate, Mosque, and similar — added together as one figure. Net Pay is calculated automatically; do not enter it.</p>
+        ${summary.salary_updated_at ? `<p class="hint" style="margin-top:8px;">Last updated ${summary.salary_updated_at}.</p>` : `<p class="hint" style="margin-top:8px;">Not yet on file — enter both figures from the payslip before vetting.</p>`}
         <div class="form-error" id="salaryError" style="margin-top:8px;"></div>
         <button type="submit" class="btn btn-outline btn-sm" style="margin-top:10px;" id="salarySaveBtn">Save Salary &amp; Recalculate</button>
       </form>
@@ -99,8 +102,8 @@ async function openVettingModal(loanId) {
           <label for="vettingEligibility">Vetting result</label>
           <select id="vettingEligibility" required>
             <option value="">— Select —</option>
-            <option value="eligible">Eligible — within the 1/3 limit</option>
-            <option value="not_eligible">Not Eligible — exceeds the 1/3 limit</option>
+            <option value="eligible">Eligible — Net Pay stays at/above 1/3 of Gross Pay</option>
+            <option value="not_eligible">Not Eligible — Net Pay would fall below 1/3 of Gross Pay</option>
             <option value="needs_more_information">Needs More Information</option>
             <option value="on_hold">Put on Hold</option>
           </select>
@@ -131,25 +134,30 @@ async function openVettingModal(loanId) {
 function limitBadge(withinLimit) {
   if (withinLimit === null || withinLimit === undefined) return `<span class="pill pill-wait">Salary not on file</span>`;
   return withinLimit
-    ? `<span class="pill pill-ok">Within 1/3 of Gross Pay</span>`
-    : `<span class="pill pill-bad">Exceeds 1/3 of Gross Pay</span>`;
+    ? `<span class="pill pill-ok">Net Pay stays at/above 1/3 of Gross Pay</span>`
+    : `<span class="pill pill-bad">Net Pay would fall below 1/3 of Gross Pay</span>`;
 }
 
 async function handleSalarySave(e) {
   e.preventDefault();
   const gross = Number(document.getElementById("salaryGross").value);
-  const net = Number(document.getElementById("salaryNet").value);
+  const other = Number(document.getElementById("salaryOther").value);
   const errBox = document.getElementById("salaryError");
   const btn = document.getElementById("salarySaveBtn");
   errBox.classList.remove("show");
 
-  if (!gross || gross <= 0 || !net || net <= 0) {
-    errBox.textContent = "Enter both Gross Pay and Net Pay as positive amounts.";
+  if (!gross || gross <= 0) {
+    errBox.textContent = "Enter Gross Pay as a positive amount.";
     errBox.classList.add("show");
     return;
   }
-  if (net > gross) {
-    errBox.textContent = "Net Pay cannot be greater than Gross Pay.";
+  if (other === "" || isNaN(other) || other < 0) {
+    errBox.textContent = "Enter Other Deductions as zero or a positive amount.";
+    errBox.classList.add("show");
+    return;
+  }
+  if (other >= gross) {
+    errBox.textContent = "Other Deductions cannot be greater than or equal to Gross Pay.";
     errBox.classList.add("show");
     return;
   }
@@ -157,7 +165,7 @@ async function handleSalarySave(e) {
   btn.disabled = true; btn.textContent = "Saving…";
   try {
     const memberId = await resolveMemberIdForLoan(currentVettingLoanId);
-    await setMemberSalary(memberId, gross, net);
+    await setMemberSalary(memberId, gross, other);
     toast("Salary saved.");
     openVettingModal(currentVettingLoanId); // reload with fresh figures
   } catch (err) {
@@ -172,7 +180,7 @@ async function handleVettingSubmit(e) {
   const eligibility = document.getElementById("vettingEligibility").value;
   const note = document.getElementById("vettingNote").value.trim();
   const grossInput = document.getElementById("salaryGross").value;
-  const netInput = document.getElementById("salaryNet").value;
+  const otherInput = document.getElementById("salaryOther").value;
   const errBox = document.getElementById("vettingError");
   const btn = document.getElementById("vettingSubmitBtn");
   errBox.classList.remove("show");
@@ -184,7 +192,7 @@ async function handleVettingSubmit(e) {
       eligibility,
       note,
       grossInput ? Number(grossInput) : null,
-      netInput ? Number(netInput) : null
+      otherInput !== "" ? Number(otherInput) : null
     );
     closeVettingModal();
     toast("Vetting submitted.");
@@ -224,7 +232,7 @@ async function loadBursaryHistory() {
         <td>${v.loans?.profiles ? `${v.loans.profiles.first_name} ${v.loans.profiles.surname}` : v.loan_id}</td>
         <td>${v.loans ? `${capitalize(v.loans.type)} — ${formatNaira(v.loans.amount)}` : "—"}</td>
         <td>${eligibilityPillFor(v.eligibility_status)}</td>
-        <td class="mono-cell" style="font-size:12px;">${formatNaira(v.total_projected_deductions)} / limit ${formatNaira(v.one_third_gross_limit)}</td>
+        <td class="mono-cell" style="font-size:12px;">${formatNaira(v.net_pay_after_deductions)} / needs ≥ ${formatNaira(v.one_third_gross_limit)}</td>
         <td>${v.note}</td>
       </tr>
     `).join("");

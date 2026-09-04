@@ -85,8 +85,8 @@ async function openAssessmentModal(loanId) {
         <strong>Bursary Officer's Vetting</strong><br>
         ${vetting
           ? `Result: ${vettingBadge(vetting.eligibility_status)}<br>
-             Gross Pay: ${formatNaira(vetting.gross_pay)} &middot; Net Pay: ${formatNaira(vetting.net_pay)}<br>
-             Total deductions if approved: ${formatNaira(vetting.total_projected_deductions)} (existing ${formatNaira(vetting.existing_monthly_deductions)} + this loan ${formatNaira(vetting.proposed_monthly_deduction)}) against a 1/3-of-Gross-Pay limit of ${formatNaira(vetting.one_third_gross_limit)}<br>
+             Gross Pay: ${formatNaira(vetting.gross_pay)} &middot; Other Deductions: ${formatNaira(vetting.other_monthly_deductions)} &middot; Net Pay (calculated): ${formatNaira(vetting.net_pay)}<br>
+             After existing cooperative deductions (${formatNaira(vetting.existing_monthly_deductions)}) and this loan (${formatNaira(vetting.proposed_monthly_deduction)}), ${formatNaira(vetting.net_pay_after_deductions)} would remain — required minimum is 1/3 of Gross Pay (${formatNaira(vetting.one_third_gross_limit)})<br>
              Note: ${vetting.note}`
           : `<span class="pill pill-wait">NOT YET SUBMITTED</span>`}
       </div>

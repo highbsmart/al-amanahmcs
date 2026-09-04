@@ -91,11 +91,29 @@ $$;
 -- ---------------------------------------------------------
 alter table profiles
   add column if not exists gross_pay        numeric,
+  add column if not exists other_monthly_deductions numeric,
   add column if not exists net_pay          numeric,
   add column if not exists salary_updated_at date,
   add column if not exists salary_updated_by uuid references profiles(id);
 
-create or replace function public.set_member_salary(p_member_id uuid, p_gross_pay numeric, p_net_pay numeric)
+-- p_other_monthly_deductions is every recognized workplace deduction
+-- OUTSIDE the cooperative — PAYE tax, Union Dues, NHF, ID card,
+-- water rate, Mosque, and similar — all added together into one
+-- figure, taken straight from the member's payslip. Net Pay is not
+-- entered by hand; the system calculates it:
+--   Net Pay = Gross Pay − Other (non-cooperative) Deductions
+-- Al-Amanah's own deductions (savings + loan repayments) are
+-- accounted for separately, later, when a specific loan is vetted —
+-- see get_bursary_financial_summary() / submit_bursary_vetting()
+-- below.
+-- Drop first: CREATE OR REPLACE cannot rename a parameter, even
+-- when the type is unchanged, and this function's second
+-- parameter was renamed from p_net_pay to
+-- p_other_monthly_deductions. Safe if the function doesn't exist
+-- yet (a fresh install) — DROP ... IF EXISTS is a no-op then.
+drop function if exists public.set_member_salary(uuid, numeric, numeric);
+
+create or replace function public.set_member_salary(p_member_id uuid, p_gross_pay numeric, p_other_monthly_deductions numeric)
 returns void
 language plpgsql
 security definer
@@ -105,16 +123,20 @@ begin
   if not (public.is_bursary() or public.is_admin()) then
     raise exception 'Only the Bursary Officer or a Super Admin may record a member''s salary.';
   end if;
-  if p_gross_pay is null or p_gross_pay <= 0 or p_net_pay is null or p_net_pay <= 0 then
-    raise exception 'Gross Pay and Net Pay must both be positive amounts.';
+  if p_gross_pay is null or p_gross_pay <= 0 then
+    raise exception 'Gross Pay must be a positive amount.';
   end if;
-  if p_net_pay > p_gross_pay then
-    raise exception 'Net Pay cannot be greater than Gross Pay.';
+  if p_other_monthly_deductions is null or p_other_monthly_deductions < 0 then
+    raise exception 'Other Deductions cannot be negative.';
+  end if;
+  if p_other_monthly_deductions >= p_gross_pay then
+    raise exception 'Other Deductions cannot be greater than or equal to Gross Pay.';
   end if;
 
   update profiles set
     gross_pay = p_gross_pay,
-    net_pay = p_net_pay,
+    other_monthly_deductions = p_other_monthly_deductions,
+    net_pay = p_gross_pay - p_other_monthly_deductions,
     salary_updated_at = current_date,
     salary_updated_by = auth.uid()
   where id = p_member_id;
@@ -131,6 +153,7 @@ create table if not exists loan_vettings (
   loan_id                  text not null references loans(id) on delete cascade,
   bursary_officer_id       uuid not null references profiles(id),
   gross_pay                numeric not null,
+  other_monthly_deductions numeric not null,
   net_pay                  numeric not null,
   existing_monthly_deductions numeric not null,
   proposed_monthly_deduction  numeric not null,
@@ -142,6 +165,8 @@ create table if not exists loan_vettings (
   note                     text not null,
   created_at               timestamptz not null default now()
 );
+
+alter table loan_vettings add column if not exists other_monthly_deductions numeric not null default 0;
 
 alter table loan_vettings enable row level security;
 
@@ -196,7 +221,8 @@ declare
   v_profile profiles%rowtype;
   v_existing numeric;
   v_proposed numeric;
-  v_total numeric;
+  v_net_before_coop numeric;
+  v_net_after_coop numeric;
 begin
   if not (public.is_bursary() or public.is_admin()) then
     raise exception 'Not authorized.';
@@ -220,7 +246,19 @@ begin
     else v_loan.amount + coalesce(v_loan.admin_charge, 0)
   end;
 
-  v_total := v_existing + v_proposed;
+  -- Net Pay is calculated, never entered by hand:
+  --   Net Pay (before coop deductions) = Gross Pay − Other Deductions
+  -- Then this specific loan's own math further subtracts the
+  -- member's existing Al-Amanah obligations and this new loan's
+  -- deduction, to see what would actually be left.
+  v_net_before_coop := case when v_profile.gross_pay is not null and v_profile.other_monthly_deductions is not null
+    then v_profile.gross_pay - v_profile.other_monthly_deductions
+    else null
+  end;
+  v_net_after_coop := case when v_net_before_coop is not null
+    then v_net_before_coop - v_existing - v_proposed
+    else null
+  end;
 
   return jsonb_build_object(
     'member_name', v_profile.first_name || ' ' || v_profile.surname,
@@ -231,20 +269,20 @@ begin
     'duration', v_loan.duration,
     'purpose', v_loan.purpose,
     'gross_pay', v_profile.gross_pay,
-    'net_pay', v_profile.net_pay,
+    'other_monthly_deductions', v_profile.other_monthly_deductions,
+    'net_pay', v_net_before_coop,
     'salary_updated_at', v_profile.salary_updated_at,
     'existing_monthly_deductions', v_existing,
     'proposed_monthly_deduction', v_proposed,
-    'total_projected_deductions', v_total,
+    'total_projected_deductions', v_existing + v_proposed,
     'one_third_gross_limit', case when v_profile.gross_pay is not null then round(v_profile.gross_pay / 3.0) else null end,
-    -- Net Pay after this loan is shown only for the Bursary
-    -- Officer's own reference/cross-check against the payslip —
-    -- it does not drive the eligibility decision, which is based
-    -- solely on total deductions vs. 1/3 of Gross Pay below.
-    'net_pay_after_deductions', case when v_profile.net_pay is not null then v_profile.net_pay - v_total else null end,
+    'net_pay_after_deductions', v_net_after_coop,
+    -- The rule: what's LEFT after every deduction (other + coop +
+    -- this new loan) must be AT LEAST one-third of Gross Pay —
+    -- deductions may take up to two-thirds, not more.
     'within_limit', case
-      when v_profile.gross_pay is null then null
-      else v_total <= round(v_profile.gross_pay / 3.0)
+      when v_profile.gross_pay is null or v_net_after_coop is null then null
+      else v_net_after_coop >= round(v_profile.gross_pay / 3.0)
     end
   );
 end;
@@ -253,7 +291,8 @@ $$;
 -- ---------------------------------------------------------
 -- 6. submit_bursary_vetting — the hard 1/3 gate. Bursary may
 --    optionally record/update the member's salary in the same
---    call (p_gross_pay / p_net_pay), or rely on figures already
+--    call (p_gross_pay / p_other_monthly_deductions), or rely on
+--    figures already
 --    on file. Marking an application "eligible" is REJECTED
 --    server-side if total deductions (existing Al-Amanah loan
 --    repayments + monthly savings + 7.5% savings admin charge +
@@ -262,12 +301,16 @@ $$;
 --    dropdown value; the system itself will not allow it, per the
 --    deduction ceiling the cooperative applies to every member.
 -- ---------------------------------------------------------
+-- Drop first: same parameter-rename issue as set_member_salary
+-- above (p_net_pay -> p_other_monthly_deductions).
+drop function if exists public.submit_bursary_vetting(text, text, text, numeric, numeric);
+
 create or replace function public.submit_bursary_vetting(
   p_loan_id text,
   p_eligibility_status text,
   p_note text,
   p_gross_pay numeric default null,
-  p_net_pay numeric default null
+  p_other_monthly_deductions numeric default null
 )
 returns void
 language plpgsql
@@ -277,12 +320,11 @@ as $$
 declare
   v_loan loans%rowtype;
   v_profile profiles%rowtype;
-  v_summary jsonb;
   v_existing numeric;
   v_proposed numeric;
-  v_total numeric;
   v_gross numeric;
-  v_net numeric;
+  v_other numeric;
+  v_net_before_coop numeric;
   v_limit numeric;
   v_remaining_net numeric;
   v_within boolean;
@@ -308,16 +350,16 @@ begin
   end if;
 
   -- Record/refresh the member's salary if given this time.
-  if p_gross_pay is not null or p_net_pay is not null then
-    perform public.set_member_salary(v_loan.member_id, p_gross_pay, p_net_pay);
+  if p_gross_pay is not null or p_other_monthly_deductions is not null then
+    perform public.set_member_salary(v_loan.member_id, p_gross_pay, p_other_monthly_deductions);
   end if;
 
   select * into v_profile from profiles where id = v_loan.member_id;
   v_gross := v_profile.gross_pay;
-  v_net := v_profile.net_pay;
+  v_other := v_profile.other_monthly_deductions;
 
-  if v_gross is null or v_net is null then
-    raise exception 'Record this member''s Gross Pay and Net Pay before vetting this application.';
+  if v_gross is null or v_other is null then
+    raise exception 'Record this member''s Gross Pay and Other (non-cooperative) Deductions before vetting this application.';
   end if;
 
   select coalesce(sum(monthly_deduction), 0) into v_existing
@@ -331,36 +373,39 @@ begin
     then round((v_loan.amount + coalesce(v_loan.admin_charge, 0)) / v_loan.duration)
     else v_loan.amount + coalesce(v_loan.admin_charge, 0)
   end;
-  v_total := v_existing + v_proposed;
+
+  -- Net Pay is calculated, never entered by hand:
+  --   Net Pay (before coop deductions) = Gross Pay − Other Deductions
+  -- Then existing Al-Amanah obligations and this new loan's own
+  -- deduction are subtracted to see what would truly be left.
+  v_net_before_coop := v_gross - v_other;
+  v_remaining_net := v_net_before_coop - v_existing - v_proposed;
   v_limit := round(v_gross / 3.0);
-  -- The 1/3 rule: existing Al-Amanah loan repayments + monthly
-  -- savings + the 7.5% savings admin charge + this new loan's own
-  -- repayment, all added together, must not exceed one-third of
-  -- Gross Pay. Net Pay is recorded and shown for the Bursary
-  -- Officer's reference/cross-check against the payslip, but does
-  -- not itself drive this decision.
-  v_remaining_net := v_net - v_total;
-  v_within := v_total <= v_limit;
+
+  -- The rule: what's LEFT after every deduction (other + coop +
+  -- this new loan) must be AT LEAST one-third of Gross Pay.
+  v_within := v_remaining_net >= v_limit;
 
   -- The hard gate: Bursary cannot mark an application eligible if
-  -- total deductions would exceed one-third of Gross Pay. The
-  -- system itself enforces this — it cannot be overridden by
-  -- dropdown choice alone.
+  -- the member's remaining pay would fall below one-third of Gross
+  -- Pay. The system itself enforces this — it cannot be overridden
+  -- by dropdown choice alone.
   if p_eligibility_status = 'eligible' and not v_within then
-    raise exception 'This application cannot be marked eligible: total deductions of % (existing % + this loan %) exceed one-third of Gross Pay (%).',
-      to_char(v_total, 'FM999,999,999'),
+    raise exception 'This application cannot be marked eligible: after all deductions (other %, existing cooperative %, this loan %), only % would remain — below one-third of Gross Pay (%).',
+      to_char(v_other, 'FM999,999,999'),
       to_char(v_existing, 'FM999,999,999'),
       to_char(v_proposed, 'FM999,999,999'),
+      to_char(round(v_remaining_net), 'FM999,999,999'),
       to_char(v_limit, 'FM999,999,999');
   end if;
 
   insert into loan_vettings (
-    loan_id, bursary_officer_id, gross_pay, net_pay,
+    loan_id, bursary_officer_id, gross_pay, other_monthly_deductions, net_pay,
     existing_monthly_deductions, proposed_monthly_deduction, total_projected_deductions,
     one_third_gross_limit, net_pay_after_deductions, within_limit, eligibility_status, note
   ) values (
-    p_loan_id, auth.uid(), v_gross, v_net,
-    v_existing, v_proposed, v_total,
+    p_loan_id, auth.uid(), v_gross, v_other, v_net_before_coop,
+    v_existing, v_proposed, v_existing + v_proposed,
     v_limit, v_remaining_net, v_within, p_eligibility_status, p_note
   );
 
@@ -372,7 +417,7 @@ begin
     update loans set
       status = 'declined',
       date_decision = current_date,
-      decline_reason = coalesce(p_note, 'Total deductions would exceed one-third of Gross Pay (Bursary vetting).'),
+      decline_reason = coalesce(p_note, 'Net Pay after all deductions would fall below one-third of Gross Pay (Bursary vetting).'),
       workflow_status = v_new_workflow_status
     where id = p_loan_id;
   else
