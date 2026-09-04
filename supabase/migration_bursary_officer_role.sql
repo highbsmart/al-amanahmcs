@@ -234,10 +234,16 @@ begin
     'proposed_monthly_deduction', v_proposed,
     'total_projected_deductions', v_total,
     'one_third_gross_limit', case when v_profile.gross_pay is not null then round(v_profile.gross_pay / 3.0) else null end,
-    'net_pay_after_deductions', case when v_profile.net_pay is not null then v_profile.net_pay - v_total else null end,
+    -- Net Pay (from the member's actual payslip) already has ALL
+    -- current deductions subtracted from it — including this
+    -- member's existing Al-Amanah savings and loan repayments.
+    -- Only the NEW loan being vetted here further reduces it; the
+    -- old (existing) deductions must not be subtracted a second
+    -- time or every member looks far more over-limit than reality.
+    'net_pay_after_deductions', case when v_profile.net_pay is not null then v_profile.net_pay - v_proposed else null end,
     'within_limit', case
       when v_profile.gross_pay is null or v_profile.net_pay is null then null
-      else (v_profile.net_pay - v_total) >= round(v_profile.gross_pay / 3.0)
+      else (v_profile.net_pay - v_proposed) >= round(v_profile.gross_pay / 3.0)
     end
   );
 end;
@@ -323,7 +329,15 @@ begin
   end;
   v_total := v_existing + v_proposed;
   v_limit := round(v_gross / 3.0);
-  v_remaining_net := v_net - v_total;
+  -- Net Pay already reflects every deduction currently on the
+  -- member's payslip, including their existing Al-Amanah savings
+  -- and loan repayments (v_existing, above, is kept only so the
+  -- Bursary Officer can cross-check it against the "Al-Amanah
+  -- Saving"/"Al-Amanah Ded" lines on the real payslip). Only the
+  -- NEW loan's own deduction (v_proposed) further reduces take-home
+  -- pay from here — subtracting v_existing again would double-count
+  -- deductions the payslip has already applied.
+  v_remaining_net := v_net - v_proposed;
   v_within := v_remaining_net >= v_limit;
 
   -- The hard gate: Bursary cannot mark an application eligible if,
@@ -332,8 +346,8 @@ begin
   -- itself enforces this — it cannot be overridden by dropdown
   -- choice alone.
   if p_eligibility_status = 'eligible' and not v_within then
-    raise exception 'This application cannot be marked eligible: after total deductions of %, Net Pay would be %, which is below one-third of Gross Pay (%).',
-      to_char(v_total, 'FM999,999,999'),
+    raise exception 'This application cannot be marked eligible: adding this loan''s deduction of % would bring Net Pay down to %, which is below one-third of Gross Pay (%).',
+      to_char(v_proposed, 'FM999,999,999'),
       to_char(round(v_remaining_net), 'FM999,999,999'),
       to_char(v_limit, 'FM999,999,999');
   end if;
@@ -356,7 +370,7 @@ begin
     update loans set
       status = 'declined',
       date_decision = current_date,
-      decline_reason = coalesce(p_note, 'Total deductions would exceed one-third of Gross/Net Pay (Bursary vetting).'),
+      decline_reason = coalesce(p_note, 'This loan would bring Net Pay below one-third of Gross Pay (Bursary vetting).'),
       workflow_status = v_new_workflow_status
     where id = p_loan_id;
   else

@@ -68,10 +68,10 @@ async function openVettingModal(loanId) {
       <div class="stat-strip" style="grid-template-columns:1fr 1fr;margin-bottom:20px;">
         <div class="stat-card"><div class="hint">Member</div><div style="font-weight:700;">${summary.member_name}</div><div class="hint">${summary.alamanah_no}${summary.department ? " &middot; " + summary.department : ""}</div></div>
         <div class="stat-card"><div class="hint">Request</div><div style="font-weight:700;">${capitalize(summary.loan_type)} Loan — ${formatNaira(summary.amount)}</div><div class="hint">${summary.duration} months</div></div>
-        <div class="stat-card"><div class="hint">Existing Monthly Deductions</div><div style="font-weight:700;">${formatNaira(summary.existing_monthly_deductions)}</div><div class="hint">Active loans + monthly savings</div></div>
-        <div class="stat-card"><div class="hint">This Loan's Monthly Deduction</div><div style="font-weight:700;">${formatNaira(summary.proposed_monthly_deduction)}</div></div>
-        <div class="stat-card"><div class="hint">Total Projected Deductions</div><div style="font-weight:700;">${formatNaira(summary.total_projected_deductions)}</div></div>
-        <div class="stat-card"><div class="hint">Net Pay After Deductions</div><div style="font-weight:700;">${summary.net_pay_after_deductions != null ? formatNaira(summary.net_pay_after_deductions) : "—"}</div><div class="hint">Must stay at/above 1/3 of Gross Pay</div></div>
+        <div class="stat-card"><div class="hint">Existing Cooperative Deductions (this system's records)</div><div style="font-weight:700;">${formatNaira(summary.existing_monthly_deductions)}</div><div class="hint">Cross-check vs. "Al-Amanah Saving" + "Al-Amanah Ded" on the member's real payslip — already inside their current Net Pay below</div></div>
+        <div class="stat-card"><div class="hint">This Loan's Monthly Deduction</div><div style="font-weight:700;">${formatNaira(summary.proposed_monthly_deduction)}</div><div class="hint">The only new amount that further reduces Net Pay</div></div>
+        <div class="stat-card"><div class="hint">Current Net Pay (from payslip)</div><div style="font-weight:700;">${summary.net_pay != null ? formatNaira(summary.net_pay) : "—"}</div><div class="hint">Already reflects all current deductions</div></div>
+        <div class="stat-card"><div class="hint">Net Pay If This Loan Is Approved</div><div style="font-weight:700;">${summary.net_pay_after_deductions != null ? formatNaira(summary.net_pay_after_deductions) : "—"}</div><div class="hint">Must stay at/above 1/3 of Gross Pay</div></div>
         <div class="stat-card"><div class="hint">Result So Far</div><div style="font-weight:700;">${limitBadge(summary.within_limit)}</div></div>
       </div>
       <p class="hint" style="margin-bottom:16px;"><strong>Purpose:</strong> ${summary.purpose}</p>
