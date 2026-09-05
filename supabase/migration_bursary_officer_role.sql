@@ -428,7 +428,7 @@ begin
   perform public.log_activity(
     'loan_vetting_submitted', 'loan', p_loan_id, v_loan.member_id,
     v_loan.workflow_status, v_new_workflow_status,
-    jsonb_build_object('eligibility_status', p_eligibility_status, 'total_projected_deductions', v_total, 'within_limit', v_within)
+    jsonb_build_object('eligibility_status', p_eligibility_status, 'total_projected_deductions', v_existing + v_proposed, 'within_limit', v_within)
   );
 end;
 $$;

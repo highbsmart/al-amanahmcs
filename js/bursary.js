@@ -70,17 +70,24 @@ async function openVettingModal(loanId) {
       <div class="stat-strip" style="grid-template-columns:1fr 1fr;margin-bottom:20px;">
         <div class="stat-card"><div class="hint">Member</div><div style="font-weight:700;">${summary.member_name}</div><div class="hint">${summary.alamanah_no}${summary.department ? " &middot; " + summary.department : ""}</div></div>
         <div class="stat-card"><div class="hint">Request</div><div style="font-weight:700;">${capitalize(summary.loan_type)} Loan — ${formatNaira(summary.amount)}</div><div class="hint">${summary.duration} months</div></div>
-        <div class="stat-card"><div class="hint">Net Pay (calculated: Gross − Other Deductions)</div><div style="font-weight:700;">${summary.net_pay != null ? formatNaira(summary.net_pay) : "—"}</div><div class="hint">Before cooperative deductions</div></div>
-        <div class="stat-card"><div class="hint">Existing Cooperative Deductions</div><div style="font-weight:700;">${formatNaira(summary.existing_monthly_deductions)}</div><div class="hint">Active loans + monthly savings + 7.5% savings admin charge</div></div>
-        <div class="stat-card"><div class="hint">This Loan's Monthly Deduction</div><div style="font-weight:700;">${formatNaira(summary.proposed_monthly_deduction)}</div></div>
-        <div class="stat-card"><div class="hint">Net Pay If This Loan Is Approved</div><div style="font-weight:700;">${summary.net_pay_after_deductions != null ? formatNaira(summary.net_pay_after_deductions) : "—"}</div><div class="hint">Must be at least 1/3 of Gross Pay</div></div>
-        <div class="stat-card"><div class="hint">1/3 of Gross Pay (the minimum required)</div><div style="font-weight:700;">${summary.one_third_gross_limit != null ? formatNaira(summary.one_third_gross_limit) : "—"}</div></div>
-        <div class="stat-card"><div class="hint">Result So Far</div><div style="font-weight:700;">${limitBadge(summary.within_limit)}</div></div>
+      </div>
+
+      <div class="vetting-ledger">
+        <div class="vetting-ledger-title">Affordability Check</div>
+        <div class="vetting-ledger-row"><span>Gross Pay</span><span>${formatNaira(summary.gross_pay)}</span></div>
+        <div class="vetting-ledger-row vetting-ledger-minus"><span>Other Deductions</span><span>&minus; ${formatNaira(summary.other_monthly_deductions)}</span></div>
+        <div class="vetting-ledger-row vetting-ledger-subtotal"><span>Net Pay</span><span>${summary.net_pay != null ? formatNaira(summary.net_pay) : "—"}</span></div>
+        <div class="vetting-ledger-row vetting-ledger-minus"><span>Existing Cooperative Deductions</span><span>&minus; ${formatNaira(summary.existing_monthly_deductions)}</span></div>
+        <div class="vetting-ledger-row vetting-ledger-minus"><span>This Loan's Monthly Deduction</span><span>&minus; ${formatNaira(summary.proposed_monthly_deduction)}</span></div>
+        <div class="vetting-ledger-row vetting-ledger-total"><span>Net Pay After All Deductions</span><span>${summary.net_pay_after_deductions != null ? formatNaira(summary.net_pay_after_deductions) : "—"}</span></div>
+        <div class="vetting-ledger-row vetting-ledger-requirement"><span>Required for This Member (1/3 of their Gross Pay)</span><span>${summary.one_third_gross_limit != null ? "≥ " + formatNaira(summary.one_third_gross_limit) : "—"}</span></div>
+        <div class="vetting-ledger-result">${limitBadge(summary.within_limit)}</div>
       </div>
       <p class="hint" style="margin-bottom:16px;"><strong>Purpose:</strong> ${summary.purpose}</p>
 
       <form id="salaryForm" style="background:var(--green-100);border:1px solid var(--green-500);border-radius:var(--radius-s);padding:16px;margin-bottom:20px;">
-        <p style="font-weight:700;margin-bottom:10px;">Salary on file (by rank, from the salary scale)</p>
+        <p style="font-weight:700;margin-bottom:2px;">Salary Record</p>
+        <p class="hint" style="margin-bottom:12px;">By rank, from the official salary scale.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="field" style="margin-bottom:0;">
             <label for="salaryGross">Gross Pay (₦/month)</label>
@@ -89,10 +96,10 @@ async function openVettingModal(loanId) {
           <div class="field" style="margin-bottom:0;">
             <label for="salaryOther">Other Deductions (₦/month)</label>
             <input type="number" id="salaryOther" min="0" step="1" value="${summary.other_monthly_deductions ?? ""}" placeholder="e.g. 55009">
+            <p class="hint" style="margin-top:5px;">PAYE, Union Dues, NHF, ID Card, Water Rate, Mosque, etc. — combined into one figure. Net Pay is calculated, not entered.</p>
           </div>
         </div>
-        <p class="hint" style="margin-top:6px;">Other Deductions = everything on the payslip that is NOT Al-Amanah — PAYE, Union Dues, NHF, ID Card, Water Rate, Mosque, and similar — added together as one figure. Net Pay is calculated automatically; do not enter it.</p>
-        ${summary.salary_updated_at ? `<p class="hint" style="margin-top:8px;">Last updated ${summary.salary_updated_at}.</p>` : `<p class="hint" style="margin-top:8px;">Not yet on file — enter both figures from the payslip before vetting.</p>`}
+        ${summary.salary_updated_at ? `<p class="hint" style="margin-top:10px;">Last updated ${summary.salary_updated_at}.</p>` : `<p class="hint" style="margin-top:10px;">Not yet on file — enter both figures from the payslip before vetting.</p>`}
         <div class="form-error" id="salaryError" style="margin-top:8px;"></div>
         <button type="submit" class="btn btn-outline btn-sm" style="margin-top:10px;" id="salarySaveBtn">Save Salary &amp; Recalculate</button>
       </form>

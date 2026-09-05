@@ -336,6 +336,21 @@ input[type="checkbox"]{width:auto;padding:0;}
 .stat-card{background:var(--paper);border-radius:var(--radius-m);padding:16px 18px;box-shadow:var(--shadow-card);border-left:4px solid var(--green-600);}
 .hint{font-size:12px;color:var(--ink-soft);}
 
+/* Bursary vetting ledger — a payslip-style affordability breakdown */
+.vetting-ledger{background:var(--paper);border-radius:var(--radius-m);box-shadow:var(--shadow-card);padding:22px 24px;margin-bottom:20px;}
+.vetting-ledger-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--green-700);margin-bottom:14px;}
+.vetting-ledger-row{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;font-family:var(--font-mono);font-size:14px;color:var(--ink);border-bottom:1px solid var(--cream-dark);}
+.vetting-ledger-row span:first-child{font-family:var(--font-body);font-size:13.5px;color:var(--ink-soft);}
+.vetting-ledger-minus span:last-child{color:var(--danger);}
+.vetting-ledger-subtotal{border-bottom:2px solid var(--ink);font-weight:700;}
+.vetting-ledger-subtotal span:first-child{color:var(--ink);font-weight:700;}
+.vetting-ledger-total{border-bottom:none;font-weight:700;font-size:16px;padding-top:12px;}
+.vetting-ledger-total span:first-child{color:var(--ink);font-weight:700;font-family:var(--font-body);font-size:14px;}
+.vetting-ledger-requirement{border-bottom:none;padding-top:2px;font-size:12.5px;color:var(--ink-soft);}
+.vetting-ledger-requirement span:first-child{font-style:italic;}
+.vetting-ledger-requirement span:last-child{font-family:var(--font-mono);color:var(--ink-soft);}
+.vetting-ledger-result{margin-top:14px;padding-top:14px;border-top:1px solid var(--cream-dark);text-align:right;}
+
 /* footer */
 .site-footer{background:var(--green-900);color:rgba(247,242,228,.8);padding:56px 0 26px;margin-top:60px;}
 .footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px;margin-bottom:36px;}
