@@ -630,6 +630,20 @@ async function toggleSavingsPausedClick(memberId, currentlyPaused) {
   }
 }
 
+async function undoSavingsClick(memberId, name, amount) {
+  const reason = window.prompt(`Reason for undoing ${name}'s ${formatNaira(amount)} savings contribution this month (required):`, "");
+  if (reason === null) return;
+  if (!reason.trim()) { toast("A reason is required to undo this.", "error"); return; }
+  try {
+    await undoSavingsContribution(memberId, reason.trim());
+    toast(`Undone. ${name} is eligible for savings processing again this month.`);
+    renderAdmin();
+    await refreshMemberDetailIfOpen();
+  } catch (err) {
+    toast(err.message || "Could not undo this contribution.", "error");
+  }
+}
+
 async function toggleDeductionsPausedClick(memberId, currentlyPaused) {
   try {
     await setDeductionsPaused(memberId, !currentlyPaused);
@@ -1065,6 +1079,8 @@ async function openMemberDetail(memberId) {
         <div style="display:flex;align-items:center;gap:10px;">${loanStatusPillAdmin(l.status)}<span aria-hidden="true" style="color:var(--ink-soft);">&#8250;</span></div>
       </div>`).join('') : '<p class="lede">No loan records for this member.</p>';
     const nextReview = nextSavingsReviewDate();
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+    const canUndoSavings = member.last_savings_date && new Date(member.last_savings_date) >= monthStart;
     box.innerHTML = `<div class="dash-grid"><div class="card"><h4>Identity &amp; contact</h4>
       <p><strong>Department:</strong> ${member.department || '<span class="hint">Not set</span>'}</p>
       <p><strong>Phone:</strong> ${member.phone || '<span class="hint">Not set</span>'}</p>
@@ -1088,6 +1104,7 @@ async function openMemberDetail(memberId) {
           <button onclick="openEditSavingsModal('${member.id}','${member.first_name} ${member.surname}', ${Number(member.savings_balance)||0})">Edit savings balance</button>
           <button onclick="markReviewedClick('${member.id}')">Mark savings review complete</button>
           <button onclick="toggleSavingsPausedClick('${member.id}', ${!!member.savings_paused})">${member.savings_paused ? 'Resume savings' : 'Pause savings'}</button>
+          ${canUndoSavings ? `<button onclick="undoSavingsClick('${member.id}','${member.first_name} ${member.surname}', ${Number(member.last_savings_amount)||0})">Undo this month's savings (${formatNaira(member.last_savings_amount)})</button>` : ''}
           <div class="action-menu-divider"></div>
           <div class="action-menu-label">Charges &amp; payslip</div>
           <button onclick="openEditAdminChargeModal('${member.id}','${member.first_name} ${member.surname}', ${Number(member.total_admin_charges)||0})">Edit admin charges</button>
@@ -1287,10 +1304,14 @@ function openLoanDetail(loanId, memberId) {
   currentLoanDetailMemberId = memberId;
   const total = Number(loan.amount || 0) + Number(loan.admin_charge || 0);
   const deletable = ["declined", "offset", "completed"].includes(loan.status);
-  const actions = loan.status === "approved" ? `
+  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+  const canUndoDeduction = loan.last_deduction_date && new Date(loan.last_deduction_date) >= monthStart;
+  const lastDeductionTotal = (Number(loan.last_deduction_loan_cut) || 0) + (Number(loan.last_deduction_admin_cut) || 0);
+  const undoButton = canUndoDeduction ? `<button class="btn btn-outline btn-sm" onclick="undoLoanDeductionClick('${loan.id}', ${lastDeductionTotal})">Undo this month's deduction (${formatNaira(lastDeductionTotal)})</button>` : '';
+  const actions = (loan.status === "approved" ? `
     <button class="btn btn-outline btn-sm" onclick="processLoanDeductionFromDetail('${loan.id}')">Process deduction</button>
     <button class="btn btn-outline btn-sm" onclick="offsetLoanClick('${loan.id}')">Offset loan</button>
-    <button class="btn btn-outline btn-sm" onclick="resetLoanClick('${loan.id}')">Reset loan</button>` : '';
+    <button class="btn btn-outline btn-sm" onclick="resetLoanClick('${loan.id}')">Reset loan</button>` : '') + undoButton;
   document.getElementById("loanDetailTitle").textContent = `${LOAN_TYPES[loan.type]?.label || loan.type} — ${loan.id}`;
   document.getElementById("loanDetailContent").innerHTML = `
     <div class="ledger-rows">
@@ -1318,6 +1339,20 @@ async function processLoanDeductionFromDetail(loanId) {
     await renderAdmin();
     if (memberId) await openMemberDetail(memberId);
   } catch (err) { toast(err.message || "Could not record this deduction.", "error"); }
+}
+
+async function undoLoanDeductionClick(loanId, amount) {
+  const reason = window.prompt(`Reason for undoing the ${formatNaira(amount)} deduction recorded this month for ${loanId} (required):`, "");
+  if (reason === null) return;
+  if (!reason.trim()) { toast("A reason is required to undo this.", "error"); return; }
+  const memberId = currentLoanDetailMemberId;
+  try {
+    await undoLoanDeduction(loanId, reason.trim());
+    toast(`Undone. ${loanId} is eligible for deduction processing again this month.`);
+    closeLoanDetail();
+    await renderAdmin();
+    if (memberId) await openMemberDetail(memberId);
+  } catch (err) { toast(err.message || "Could not undo this deduction.", "error"); }
 }
 
 async function deleteLoanPermanentlyClick(loanId) {

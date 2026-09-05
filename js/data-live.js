@@ -463,6 +463,19 @@ async function updateMemberDetails(profileId, firstName, surname, department, ph
 // Recent automatic monthly-processing runs (savings + loan
 // deductions), for the admin dashboard's review/notification
 // banner. See supabase/migration_auto_monthly_processing.sql.
+// "Undo This Month" — reverses a member's most recent savings
+// contribution, or a loan's most recent monthly deduction, but
+// only if it happened in the current calendar month. See
+// supabase/migration_undo_this_month.sql.
+async function undoSavingsContribution(memberId, reason) {
+  const { error } = await supabaseClient.rpc("admin_undo_savings_contribution", { p_member_id: memberId, p_reason: reason });
+  if (error) throw error;
+}
+async function undoLoanDeduction(loanId, reason) {
+  const { error } = await supabaseClient.rpc("admin_undo_loan_deduction", { p_loan_id: loanId, p_reason: reason });
+  if (error) throw error;
+}
+
 async function getRecentAutoRuns(limit = 12) {
   const { data, error } = await supabaseClient
     .from("auto_processing_runs")
