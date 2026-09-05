@@ -351,6 +351,10 @@ input[type="checkbox"]{width:auto;padding:0;}
 .vetting-ledger-requirement span:last-child{font-family:var(--font-mono);color:var(--ink-soft);}
 .vetting-ledger-result{margin-top:14px;padding-top:14px;border-top:1px solid var(--cream-dark);text-align:right;}
 
+/* Admin dashboard: automatic-processing skip banner */
+.auto-run-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fdf6e3;border:1px solid var(--gold);border-radius:var(--radius-s);padding:14px 18px;margin-bottom:24px;}
+.auto-run-banner strong{color:var(--green-900);}
+
 /* footer */
 .site-footer{background:var(--green-900);color:rgba(247,242,228,.8);padding:56px 0 26px;margin-top:60px;}
 .footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px;margin-bottom:36px;}

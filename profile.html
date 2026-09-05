@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("profSavings").textContent = formatNaira(profile.savings_balance);
   document.getElementById("profReviewed").textContent = formatDate(profile.savings_last_reviewed);
 
-  const nextReview = nextSavingsReviewDate(profile.savings_last_reviewed);
+  const nextReview = nextSavingsReviewDate();
   document.getElementById("profNextReview").textContent = formatDate(nextReview.toISOString().slice(0, 10));
 
   const pill = document.getElementById("profStatusPill");

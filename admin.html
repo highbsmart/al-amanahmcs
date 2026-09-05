@@ -75,6 +75,7 @@
 
   <div class="wrap dash-body">
     <div class="stat-strip" id="statStrip"></div>
+    <div id="autoRunBanner"></div>
 
     <div class="admin-tabs" style="display:flex;align-items:center;justify-content:space-between;">
       <div style="display:flex;">
@@ -84,6 +85,7 @@
         <div class="admin-tab" data-tab="deductions" onclick="switchTab('deductions')">Deductions</div>
         <div class="admin-tab" data-tab="history" onclick="switchTab('history')">Decision History</div>
         <div class="admin-tab" data-tab="reports" onclick="switchTab('reports')">Reports</div>
+        <div class="admin-tab" data-tab="automation" onclick="switchTab('automation')">Automation</div>
       </div>
       <button class="btn btn-outline btn-sm" id="refreshBtn" style="margin-left:auto;" onclick="renderAdmin()">&#8635; Refresh</button>
     </div>
@@ -204,6 +206,22 @@
       <div id="reportsOutput">
         <p class="lede">Choose a date range and click "Generate reports".</p>
       </div>
+    </div>
+
+    <div id="tab-automation" class="tab-content" style="display:none;">
+      <p style="font-size:13px;color:var(--ink-soft);margin:0 0 20px;">
+        Every 5th of the month, monthly savings and loan deductions are recorded automatically — the same logic
+        as the manual "Process" buttons elsewhere in this dashboard. Nothing is ever double-charged: each member
+        or loan is processed at most once per calendar month. If a day is missed for any reason, it's simply
+        picked up the next day.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Savings Processed</th><th>Savings Skipped</th><th>Loans Processed</th><th>Loans Skipped</th></tr></thead>
+          <tbody id="autoRunsTableBody"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div id="autoRunsDetail" style="margin-top:20px;"></div>
     </div>
   </div>
 </div>

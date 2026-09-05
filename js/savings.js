@@ -4,7 +4,7 @@ async function renderSavingsPage() {
   const myTx = await getMyTransactions();
 
   const monthlyCharge = Math.round((Number(profile.monthly_savings_amount) || 0) * ADMIN_SAVINGS_CHARGE_RATE);
-  const nextReview = nextSavingsReviewDate(profile.savings_last_reviewed);
+  const nextReview = nextSavingsReviewDate();
 
   document.getElementById("savingsSubtext").textContent = `${profile.first_name} ${profile.surname} — ${profile.alamanah_no}`;
   document.getElementById("savingsSummary").innerHTML = `

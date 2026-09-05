@@ -80,25 +80,38 @@ function debounce(fn, wait) {
   };
 }
 
-/* ---------- savings review cycle: twice a year, Jan-Jun and Jul-Dec ---------- */
-// Given the date a member's savings were last reviewed, returns the Date
-// their NEXT review is due — the end of the half-year period that follows
-// the half containing the last review (30 Jun or 31 Dec).
-function nextSavingsReviewDate(lastReviewedStr) {
-  const last = lastReviewedStr ? new Date(lastReviewedStr) : new Date();
-  const year = last.getFullYear();
-  const month = last.getMonth(); // 0-11
-  if (month <= 5) {
-    // Reviewed during Jan-Jun -> next review due at the end of Jul-Dec this year.
-    return new Date(year, 11, 31);
-  }
-  // Reviewed during Jul-Dec -> next review due at the end of Jan-Jun next year.
-  return new Date(year + 1, 5, 30);
+/* ---------- savings review cycle: fixed, calendar-wide half-year
+   windows shared by every member — 5 Jan to 30 Jun, and 5 Jul to
+   31 Dec. Not tied to any individual member's own dates; driven
+   purely by today's date (or an optional reference date, mainly
+   for testing). ---------- */
+// Returns the Date the NEXT review cycle begins.
+function nextSavingsReviewDate(refDateStr) {
+  const ref = refDateStr ? new Date(refDateStr) : new Date();
+  const year = ref.getFullYear();
+  const h1Start = new Date(year, 0, 5);   // 5 Jan
+  const h1End = new Date(year, 5, 30);    // 30 Jun
+  const h2Start = new Date(year, 6, 5);   // 5 Jul
+  const h2End = new Date(year, 11, 31);   // 31 Dec
+
+  if (ref < h1Start) return h1Start;                   // 1-4 Jan: H1 is about to begin
+  if (ref <= h1End) return h2Start;                     // in H1: next cycle is H2
+  if (ref < h2Start) return h2Start;                    // 1-4 Jul: H2 is about to begin
+  if (ref <= h2End) return new Date(year + 1, 0, 5);    // in H2: next cycle is next year's H1
+  return new Date(year + 1, 0, 5);
 }
-// Human label for the half-year period a given date falls in, e.g. "Jan-Jun 2026".
+// Human label for the half-year cycle a given date falls in, e.g.
+// "5 Jan - 30 Jun 2026".
 function savingsReviewPeriodLabel(dateObj) {
   const d = dateObj instanceof Date ? dateObj : new Date(dateObj);
-  return d.getMonth() <= 5 ? `Jan-Jun ${d.getFullYear()}` : `Jul-Dec ${d.getFullYear()}`;
+  const year = d.getFullYear();
+  const h1Start = new Date(year, 0, 5);
+  const h1End = new Date(year, 5, 30);
+  const h2Start = new Date(year, 6, 5);
+  if (d < h1Start) return `5 Jan - 30 Jun ${year} (begins 5 Jan)`;
+  if (d <= h1End) return `5 Jan - 30 Jun ${year}`;
+  if (d < h2Start) return `5 Jul - 31 Dec ${year} (begins 5 Jul)`;
+  return `5 Jul - 31 Dec ${year}`;
 }
 
 /* ---------- auth ---------- */
@@ -447,6 +460,19 @@ async function updateMemberDetails(profileId, firstName, surname, department, ph
 // Super Admin's "Management Team" overview: counts of what's
 // pending at each stage, plus a merged recent-activity feed across
 // Treasurer assessments, President decisions, and Secretary records.
+// Recent automatic monthly-processing runs (savings + loan
+// deductions), for the admin dashboard's review/notification
+// banner. See supabase/migration_auto_monthly_processing.sql.
+async function getRecentAutoRuns(limit = 12) {
+  const { data, error } = await supabaseClient
+    .from("auto_processing_runs")
+    .select("*")
+    .order("run_date", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
 async function getManagementOverview() {
   const [loansRes, vettingsRes, assessmentsRes, decisionsRes, recordsRes] = await Promise.all([
     supabaseClient.from("loans").select("id, workflow_status"),

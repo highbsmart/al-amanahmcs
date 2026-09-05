@@ -96,6 +96,79 @@ async function renderAdmin() {
   renderDeductionsTable(currentApprovedLoans);
   renderHistoryTable(decided);
   renderManagementOverview();
+  renderAutoRuns();
+}
+
+/* ---------- automated monthly processing (savings + loan deductions) ---------- */
+
+async function renderAutoRuns() {
+  let runs = [];
+  try {
+    runs = await getRecentAutoRuns();
+  } catch (err) {
+    // Table may not exist yet if migration_auto_monthly_processing.sql
+    // hasn't been run — fail quietly rather than break the dashboard.
+    return;
+  }
+
+  const banner = document.getElementById("autoRunBanner");
+  const latest = runs[0];
+  const latestSkips = latest ? (latest.savings_skipped?.length || 0) + (latest.loans_skipped?.length || 0) : 0;
+  if (latest && latestSkips > 0) {
+    banner.innerHTML = `
+      <div class="auto-run-banner">
+        <span>&#9888; The automatic run on <strong>${formatDate(latest.run_date)}</strong> skipped
+          <strong>${latest.savings_skipped?.length || 0}</strong> savings contribution(s) and
+          <strong>${latest.loans_skipped?.length || 0}</strong> loan deduction(s). Review the reasons before assuming they were completed.</span>
+        <button class="btn btn-outline btn-sm" onclick="switchTab('automation')">Review</button>
+      </div>`;
+  } else {
+    banner.innerHTML = "";
+  }
+
+  const body = document.getElementById("autoRunsTableBody");
+  if (!body) return;
+  if (!runs.length) {
+    body.innerHTML = `<tr class="empty-row"><td colspan="5">No automatic runs recorded yet.</td></tr>`;
+    return;
+  }
+  body.innerHTML = runs.map((r, i) => `
+    <tr style="cursor:pointer;" onclick="showAutoRunDetail(${i})">
+      <td>${formatDate(r.run_date)}</td>
+      <td class="mono-cell">${r.savings_processed}</td>
+      <td class="mono-cell">${r.savings_skipped?.length ? `<span class="pill pill-wait">${r.savings_skipped.length}</span>` : "0"}</td>
+      <td class="mono-cell">${r.loans_processed}</td>
+      <td class="mono-cell">${r.loans_skipped?.length ? `<span class="pill pill-wait">${r.loans_skipped.length}</span>` : "0"}</td>
+    </tr>`).join("");
+
+  window._autoRuns = runs;
+  if (runs.length) showAutoRunDetail(0);
+}
+
+function showAutoRunDetail(index) {
+  const r = (window._autoRuns || [])[index];
+  const box = document.getElementById("autoRunsDetail");
+  if (!r) { box.innerHTML = ""; return; }
+
+  const memberName = (id) => {
+    const m = currentMembers.find(x => x.id === id);
+    return m ? `${m.first_name} ${m.surname} (${m.alamanah_no})` : id;
+  };
+
+  const savingsRows = (r.savings_skipped || []).map(s => `<tr><td>${memberName(s.member_id)}</td><td>${s.reason}</td></tr>`).join("");
+  const loanRows = (r.loans_skipped || []).map(s => `<tr><td class="mono-cell">${s.loan_id}</td><td>${s.reason}</td></tr>`).join("");
+
+  box.innerHTML = `
+    <h3 style="margin-bottom:12px;">Details — ${formatDate(r.run_date)}</h3>
+    ${savingsRows ? `
+      <p style="font-weight:700;margin-bottom:6px;">Savings skipped</p>
+      <div class="table-wrap" style="margin-bottom:20px;"><table><thead><tr><th>Member</th><th>Reason</th></tr></thead><tbody>${savingsRows}</tbody></table></div>
+    ` : `<p class="hint" style="margin-bottom:20px;">No savings contributions were skipped this run.</p>`}
+    ${loanRows ? `
+      <p style="font-weight:700;margin-bottom:6px;">Loan deductions skipped</p>
+      <div class="table-wrap"><table><thead><tr><th>Loan ID</th><th>Reason</th></tr></thead><tbody>${loanRows}</tbody></table></div>
+    ` : `<p class="hint">No loan deductions were skipped this run.</p>`}
+  `;
 }
 
 // Super Admin's "Management Team" tab — read-only monitoring of
@@ -475,8 +548,7 @@ function renderMembersTable(members) {
     return;
   }
   body.innerHTML = list.map(m => {
-    const nextReview = nextSavingsReviewDate(m.savings_last_reviewed);
-    const overdue = nextReview < new Date();
+    const nextReview = nextSavingsReviewDate();
     const checked = selectedMemberIds.has(m.id) ? "checked" : "";
     return `<tr>
       <td class="checkbox-cell"><input type="checkbox" ${checked} onchange="toggleMemberSelected('${m.id}', this.checked)"></td>
@@ -488,7 +560,7 @@ function renderMembersTable(members) {
       <td>${m.savings_paused ? '<span class="pill pill-wait">Paused</span>' : '<span class="pill pill-ok">Active</span>'}</td>
       <td>${m.deductions_paused ? '<span class="pill pill-wait">Paused</span>' : '<span class="pill pill-ok">Active</span>'}</td>
       <td>${statusBadge(m.status)}</td>
-      <td>${formatDate(nextReview.toISOString().slice(0,10))}${overdue ? " (overdue)" : ""}</td>
+      <td>${formatDate(nextReview.toISOString().slice(0,10))}</td>
       <td><button class="btn btn-primary btn-sm" onclick="openMemberDetail('${m.id}')">View member</button></td>
     </tr>`;
   }).join("");
@@ -992,8 +1064,7 @@ async function openMemberDetail(memberId) {
         </div>
         <div style="display:flex;align-items:center;gap:10px;">${loanStatusPillAdmin(l.status)}<span aria-hidden="true" style="color:var(--ink-soft);">&#8250;</span></div>
       </div>`).join('') : '<p class="lede">No loan records for this member.</p>';
-    const nextReview = nextSavingsReviewDate(member.savings_last_reviewed);
-    const reviewOverdue = nextReview < new Date();
+    const nextReview = nextSavingsReviewDate();
     box.innerHTML = `<div class="dash-grid"><div class="card"><h4>Identity &amp; contact</h4>
       <p><strong>Department:</strong> ${member.department || '<span class="hint">Not set</span>'}</p>
       <p><strong>Phone:</strong> ${member.phone || '<span class="hint">Not set</span>'}</p>
@@ -1007,7 +1078,7 @@ async function openMemberDetail(memberId) {
       <p><strong>Total administrative charges (lifetime):</strong> ${formatNaira(member.total_admin_charges)}</p>
       <p><strong>Savings status:</strong> ${member.savings_paused ? 'Paused' : 'Active'}</p>
       <p><strong>Loan deduction status:</strong> ${member.deductions_paused ? 'Paused' : 'Active'}</p>
-      <p><strong>Next savings review:</strong> ${formatDate(nextReview.toISOString().slice(0,10))}${reviewOverdue ? ' (overdue)' : ''}</p>
+      <p><strong>Next savings review:</strong> ${formatDate(nextReview.toISOString().slice(0,10))}</p>
       <div class="action-menu">
         <button class="btn btn-primary btn-sm" onclick="toggleActionMenu(this)">Manage Savings &amp; Deductions &#9662;</button>
         <div class="action-menu-list" hidden>
