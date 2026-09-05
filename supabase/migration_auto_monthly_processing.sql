@@ -126,9 +126,13 @@ as $$
 declare
   v_today date := current_date;
   v_month_start date := date_trunc('month', v_today)::date;
-  v_member_ids uuid[];
-  v_loan_ids text[];
-  v_row record;
+  v_member record;
+  v_loan record;
+  v_paused boolean;
+  v_charge numeric;
+  v_loan_cut numeric;
+  v_admin_cut numeric;
+  v_total numeric;
   v_savings_processed int := 0;
   v_savings_skipped jsonb := '[]'::jsonb;
   v_loans_processed int := 0;
@@ -139,50 +143,76 @@ begin
     return;
   end if;
 
-  -- SAVINGS: every active member not yet processed this calendar
-  -- month. record_savings_bulk() itself decides, per member,
-  -- whether they're actually eligible (not paused, has a monthly
-  -- amount set) — anyone it can't process comes back with a
-  -- reason, which we keep for the admin to review.
-  select array_agg(id) into v_member_ids
-  from profiles
-  where status = 'active'
-    and (last_savings_date is null or last_savings_date < v_month_start);
+  -- SAVINGS. This deliberately does NOT call record_savings_bulk()
+  -- or record_savings_contribution() — both require an admin to be
+  -- signed in (they check public.is_admin(), which looks at who is
+  -- currently logged in via auth.uid()). This job has no logged-in
+  -- user at all — it runs on a schedule, not from a session — so
+  -- that check would always fail here. Instead, the same logic
+  -- those functions use is repeated directly below. This function's
+  -- own restricted access (only the database/cron may ever call
+  -- it — see the REVOKE statement further down) is what keeps it
+  -- safe, not an admin-session check.
+  for v_member in
+    select * from profiles
+    where status = 'active'
+      and (last_savings_date is null or last_savings_date < v_month_start)
+  loop
+    if v_member.savings_paused then
+      v_savings_skipped := v_savings_skipped || jsonb_build_object('member_id', v_member.id, 'reason', 'Savings paused.');
+    elsif v_member.monthly_savings_amount <= 0 then
+      v_savings_skipped := v_savings_skipped || jsonb_build_object('member_id', v_member.id, 'reason', 'No monthly savings amount set.');
+    else
+      v_charge := round(v_member.monthly_savings_amount * 0.075);
+      update profiles set
+        savings_balance      = savings_balance + v_member.monthly_savings_amount,
+        total_admin_charges  = total_admin_charges + v_charge,
+        last_savings_date    = current_date,
+        last_savings_amount  = v_member.monthly_savings_amount,
+        next_savings_date    = public.fifth_of_next_month(current_date),
+        next_savings_amount  = v_member.monthly_savings_amount
+      where id = v_member.id;
 
-  if v_member_ids is not null then
-    for v_row in select * from public.record_savings_bulk(v_member_ids) loop
-      if v_row.processed then
-        v_savings_processed := v_savings_processed + 1;
-      else
-        v_savings_skipped := v_savings_skipped || jsonb_build_object(
-          'member_id', v_row.member_id,
-          'reason', v_row.message
-        );
-      end if;
-    end loop;
-  end if;
+      insert into transactions (member_id, description, amount, type)
+      values (v_member.id, 'Monthly savings contribution (automatic)', v_member.monthly_savings_amount, 'savings');
+      insert into transactions (member_id, description, amount, type)
+      values (v_member.id, 'Administrative charge (7.5%) — deducted from salary, separate from savings (automatic)', -v_charge, 'admin_charge');
 
-  -- LOAN DEDUCTIONS: every approved loan not yet processed this
-  -- calendar month. record_loan_deductions_bulk() calls
-  -- admin_record_loan_deduction() per loan, which checks
-  -- deductions_paused itself.
-  select array_agg(id) into v_loan_ids
-  from loans
-  where status = 'approved'
-    and (last_deduction_date is null or last_deduction_date < v_month_start);
+      v_savings_processed := v_savings_processed + 1;
+    end if;
+  end loop;
 
-  if v_loan_ids is not null then
-    for v_row in select * from public.record_loan_deductions_bulk(v_loan_ids) loop
-      if v_row.processed then
-        v_loans_processed := v_loans_processed + 1;
-      else
-        v_loans_skipped := v_loans_skipped || jsonb_build_object(
-          'loan_id', v_row.loan_id,
-          'reason', v_row.message
-        );
-      end if;
-    end loop;
-  end if;
+  -- LOAN DEDUCTIONS. Same reasoning as above — this repeats
+  -- admin_record_loan_deduction()'s logic directly rather than
+  -- calling it, since that function also requires an admin session.
+  for v_loan in
+    select * from loans
+    where status = 'approved'
+      and (last_deduction_date is null or last_deduction_date < v_month_start)
+  loop
+    select deductions_paused into v_paused from profiles where id = v_loan.member_id;
+    if v_paused then
+      v_loans_skipped := v_loans_skipped || jsonb_build_object('loan_id', v_loan.id, 'reason', 'Deductions paused for this member.');
+      continue;
+    end if;
+
+    v_loan_cut  := least(v_loan.monthly_deduction, v_loan.balance);
+    v_admin_cut := least(v_loan.admin_monthly_deduction, v_loan.admin_charge_balance);
+    v_total     := v_loan_cut + v_admin_cut;
+
+    update loans set
+      balance = greatest(0, balance - v_loan_cut),
+      admin_charge_balance = greatest(0, admin_charge_balance - v_admin_cut),
+      months_paid = months_paid + 1,
+      last_deduction_date = current_date,
+      status = case when balance - v_loan_cut <= 0 and admin_charge_balance - v_admin_cut <= 0 then 'completed' else status end
+    where id = v_loan.id;
+
+    insert into transactions (member_id, description, amount, type)
+    values (v_loan.member_id, 'Monthly loan deduction (automatic) — ' || v_loan.id, -v_total, 'loan');
+
+    v_loans_processed := v_loans_processed + 1;
+  end loop;
 
   insert into auto_processing_runs (run_date, savings_processed, savings_skipped, loans_processed, loans_skipped)
   values (v_today, v_savings_processed, v_savings_skipped, v_loans_processed, v_loans_skipped);
