@@ -700,6 +700,38 @@ async function deletePendingDirectoryMember(alamanahNo) {
   if (error) throw error;
 }
 
+// Removes several not-yet-claimed directory entries in one request — used by
+// the "Remove Selected" bulk action, for cleaning up bulk-upload mistakes
+// without clicking "Remove" one row at a time. Still restricted to
+// claimed = false, so an entry someone has already registered with can
+// never be swept up by accident.
+async function deletePendingDirectoryMembersBulk(alamanahNos) {
+  if (!alamanahNos || !alamanahNos.length) return;
+  const { error } = await supabaseClient.from("member_directory").delete().in("alamanah_no", alamanahNos).eq("claimed", false);
+  if (error) throw error;
+}
+
+/* ---------- SMS notification log (admin-only) ---------- */
+async function getRecentSmsLog(limit = 100) {
+  const { data, error } = await supabaseClient
+    .from("notification_log")
+    .select("*")
+    .eq("channel", "sms")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
+// Resends a previously-logged SMS on whichever channel it was NOT sent on
+// the first time (dnd <-> generic). The actual channel-flip logic lives in
+// the admin_resend_sms_alternate_channel() database function so it stays
+// authoritative even if this is called from somewhere else later.
+async function resendSmsAlternateChannel(notificationLogId) {
+  const { error } = await supabaseClient.rpc("admin_resend_sms_alternate_channel", { p_notification_log_id: notificationLogId });
+  if (error) throw error;
+}
+
 // Permanently deletes a registered member's login and every record tied
 // to them (loans, transactions, savings/admin-charge history, payslip
 // overrides, and more) and frees their Al-Amanah No. for reuse. This is

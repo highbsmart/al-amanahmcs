@@ -97,6 +97,7 @@ async function renderAdmin() {
   renderHistoryTable(decided);
   renderManagementOverview();
   renderAutoRuns();
+  renderSmsLog();
 }
 
 /* ---------- automated monthly processing (savings + loan deductions) ---------- */
@@ -1486,14 +1487,19 @@ async function submitBulkMembers(){
 }
 
 /* ---------- pending (not-yet-claimed) member directory entries ---------- */
+let selectedPendingDirectory = new Set();
+
 async function renderPendingDirectory(){
   const box = document.getElementById("pendingDirectoryBody");
   if (!box) return;
+  selectedPendingDirectory.clear();
+  updatePendingBulkToolbar();
   try{
     const rows = await getPendingDirectoryMembers();
     document.getElementById("pendingDirectoryCount").textContent = rows.length;
-    if (!rows.length){ box.innerHTML = `<tr class="empty-row"><td colspan="7">No members waiting to register.</td></tr>`; return; }
+    if (!rows.length){ box.innerHTML = `<tr class="empty-row"><td colspan="8">No members waiting to register.</td></tr>`; return; }
     box.innerHTML = rows.map(r => `<tr>
+      <td class="checkbox-cell"><input type="checkbox" class="pending-row-checkbox" value="${r.alamanah_no}" onchange="togglePendingSelection('${r.alamanah_no}', this.checked)"></td>
       <td class="mono-cell">${r.alamanah_no}</td>
       <td>${r.first_name} ${r.surname}</td>
       <td>${r.department || "—"}</td>
@@ -1502,10 +1508,79 @@ async function renderPendingDirectory(){
       <td class="mono-cell">${formatNaira(r.total_admin_charges)}</td>
       <td><button class="btn btn-danger btn-sm" onclick="deletePendingDirectoryClick('${r.alamanah_no}')">Remove</button></td>
     </tr>`).join("");
-  }catch(err){ box.innerHTML = `<tr class="empty-row"><td colspan="7">${err.message || "Could not load."}</td></tr>`; }
+  }catch(err){ box.innerHTML = `<tr class="empty-row"><td colspan="8">${err.message || "Could not load."}</td></tr>`; }
 }
 async function deletePendingDirectoryClick(alamanahNo){
   if (!window.confirm(`Remove ${alamanahNo} from the pending list? They will no longer be able to register.`)) return;
   try{ await deletePendingDirectoryMember(alamanahNo); toast("Removed."); renderPendingDirectory(); }
   catch(err){ toast(err.message || "Could not remove.", "error"); }
+}
+function togglePendingSelection(alamanahNo, checked){
+  if (checked) selectedPendingDirectory.add(alamanahNo);
+  else selectedPendingDirectory.delete(alamanahNo);
+  const selectAll = document.getElementById("pendingSelectAll");
+  if (selectAll) selectAll.checked = selectedPendingDirectory.size > 0 &&
+    selectedPendingDirectory.size === document.querySelectorAll(".pending-row-checkbox").length;
+  updatePendingBulkToolbar();
+}
+function toggleSelectAllPending(checked){
+  selectedPendingDirectory.clear();
+  document.querySelectorAll(".pending-row-checkbox").forEach(cb => {
+    cb.checked = checked;
+    if (checked) selectedPendingDirectory.add(cb.value);
+  });
+  updatePendingBulkToolbar();
+}
+function updatePendingBulkToolbar(){
+  const toolbar = document.getElementById("pendingBulkToolbar");
+  const count = document.getElementById("pendingBulkCount");
+  if (!toolbar || !count) return;
+  const n = selectedPendingDirectory.size;
+  toolbar.style.display = n > 0 ? "flex" : "none";
+  count.textContent = `${n} selected`;
+}
+async function deletePendingDirectoryBulkClick(){
+  const alamanahNos = Array.from(selectedPendingDirectory);
+  if (!alamanahNos.length) return;
+  if (!window.confirm(`Remove ${alamanahNos.length} pending ${alamanahNos.length === 1 ? "entry" : "entries"} (${alamanahNos.slice(0,5).join(", ")}${alamanahNos.length > 5 ? ", …" : ""})? They will no longer be able to register with these details. This cannot be undone.`)) return;
+  try{
+    await deletePendingDirectoryMembersBulk(alamanahNos);
+    toast(`Removed ${alamanahNos.length} pending ${alamanahNos.length === 1 ? "entry" : "entries"}.`);
+    renderPendingDirectory();
+  }catch(err){ toast(err.message || "Could not remove selected entries.", "error"); }
+}
+
+/* ---------- SMS notification log + manual channel resend ---------- */
+async function renderSmsLog(){
+  const box = document.getElementById("smsLogBody");
+  if (!box) return;
+  try{
+    const rows = await getRecentSmsLog();
+    if (!rows.length){ box.innerHTML = `<tr class="empty-row"><td colspan="6">No SMS attempts recorded yet.</td></tr>`; return; }
+    box.innerHTML = rows.map(r => {
+      const sentAt = r.created_at ? new Date(r.created_at).toLocaleString() : "—";
+      const channel = r.termii_channel || "—";
+      const statusBadge = r.success
+        ? `<span class="pill pill-ok">Queued (${channel})</span>`
+        : `<span class="pill pill-bad">Failed</span>`;
+      const msgPreview = (r.body || "").length > 60 ? r.body.slice(0, 60) + "…" : (r.body || "—");
+      return `<tr>
+        <td class="mono-cell" style="white-space:nowrap;">${sentAt}</td>
+        <td class="mono-cell">${r.recipient || "—"}</td>
+        <td class="mono-cell">${channel}</td>
+        <td>${statusBadge}</td>
+        <td title="${(r.body || "").replace(/"/g, '&quot;')}">${msgPreview}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="resendSmsAlternateChannelClick('${r.id}', '${channel}')">Resend on other channel</button></td>
+      </tr>`;
+    }).join("");
+  }catch(err){ box.innerHTML = `<tr class="empty-row"><td colspan="6">${err.message || "Could not load SMS log."}</td></tr>`; }
+}
+async function resendSmsAlternateChannelClick(logId, currentChannel){
+  const altChannel = currentChannel === "dnd" ? "generic" : "dnd";
+  if (!window.confirm(`Resend this message via the ${altChannel} channel?`)) return;
+  try{
+    await resendSmsAlternateChannel(logId);
+    toast(`Resend via ${altChannel} queued.`);
+    renderSmsLog();
+  }catch(err){ toast(err.message || "Could not resend message.", "error"); }
 }

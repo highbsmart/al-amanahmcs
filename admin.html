@@ -86,6 +86,7 @@
         <div class="admin-tab" data-tab="history" onclick="switchTab('history')">Decision History</div>
         <div class="admin-tab" data-tab="reports" onclick="switchTab('reports')">Reports</div>
         <div class="admin-tab" data-tab="automation" onclick="switchTab('automation')">Automation</div>
+        <div class="admin-tab" data-tab="smslog" onclick="switchTab('smslog')">SMS Log</div>
       </div>
       <button class="btn btn-outline btn-sm" id="refreshBtn" style="margin-left:auto;" onclick="renderAdmin()">&#8635; Refresh</button>
     </div>
@@ -149,10 +150,17 @@
         <h3>Pending Registration (<span id="pendingDirectoryCount">0</span>)</h3>
         <span class="lede">Added by an admin but not yet claimed — they won't appear in "All Members" above until they set up their password at Member Login using the Al-Amanah No. and surname shown here.</span>
       </div>
+      <div class="bulk-toolbar" id="pendingBulkToolbar" style="display:none;">
+        <span class="bulk-count" id="pendingBulkCount">0 selected</span>
+        <button class="btn btn-danger btn-sm" onclick="deletePendingDirectoryBulkClick()">Remove Selected</button>
+      </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Al-Amanah No.</th><th>Name</th><th>Department</th><th>Opening Savings</th><th>Monthly Amt.</th><th>Opening Admin Charge</th><th>Action</th></tr></thead>
-          <tbody id="pendingDirectoryBody"><tr class="empty-row"><td colspan="7">Loading…</td></tr></tbody>
+          <thead><tr>
+            <th class="checkbox-cell"><input type="checkbox" id="pendingSelectAll" onchange="toggleSelectAllPending(this.checked)"></th>
+            <th>Al-Amanah No.</th><th>Name</th><th>Department</th><th>Opening Savings</th><th>Monthly Amt.</th><th>Opening Admin Charge</th><th>Action</th>
+          </tr></thead>
+          <tbody id="pendingDirectoryBody"><tr class="empty-row"><td colspan="8">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -222,6 +230,25 @@
         </table>
       </div>
       <div id="autoRunsDetail" style="margin-top:20px;"></div>
+    </div>
+
+    <div id="tab-smslog" class="tab-content" style="display:none;">
+      <p style="font-size:13px;color:var(--ink-soft);margin:0 0 20px;">
+        The most recent SMS attempts sent through Termii. "Channel" shows which route was used
+        (<strong>dnd</strong> is for transactional alerts and should reach every number once Termii activates it
+        on our account; <strong>generic</strong> is the fallback route, which cannot reach numbers registered on
+        Do-Not-Disturb). If a member says they didn't receive a message, find it below and click
+        "Resend on other channel" to try the alternate route.
+      </p>
+      <div class="admin-toolbar">
+        <button class="btn btn-outline btn-sm" onclick="renderSmsLog()">&#8635; Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Sent</th><th>To</th><th>Channel</th><th>Status</th><th>Message</th><th>Action</th></tr></thead>
+          <tbody id="smsLogBody"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -487,7 +514,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="js/supabaseClient.js?v=3"></script>
 <script src="js/route-guard.js?v=4"></script>
-<script src="js/data-live.js?v=22"></script>
+<script src="js/data-live.js?v=23"></script>
 <script src="js/main.js?v=5"></script>
 <script>
 function togglePw(id, btn) {
@@ -507,7 +534,7 @@ function watchCapsLock(inputId, warnId) {
 }
 watchCapsLock("adminPass", "capsWarnAdmin");
 </script>
-<script src="js/admin.js?v=23"></script>
+<script src="js/admin.js?v=24"></script>
 <script src="js/reports.js?v=1"></script>
 </body>
 </html>
