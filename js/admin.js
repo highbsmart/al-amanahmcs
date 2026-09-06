@@ -1563,13 +1563,24 @@ async function renderSmsLog(){
     renderSmsLogFiltered();
   }catch(err){ box.innerHTML = `<tr class="empty-row"><td colspan="6">${err.message || "Could not load SMS log."}</td></tr>`; }
 }
+function smsLogBucket(r){
+  // "Failed" covers both an immediate send failure (never even queued)
+  // and a webhook-confirmed bad outcome. "Delivered" only counts when
+  // Termii's webhook has actually said so. Everything else is "Pending".
+  if (!r.success) return "failed";
+  if (r.delivery_status){
+    return String(r.delivery_status).toUpperCase() === "DELIVERED" ? "delivered" : "failed";
+  }
+  return "pending";
+}
 function updateSmsLogCounts(){
-  const queued = currentSmsLogRows.filter(r => r.success).length;
-  const failed = currentSmsLogRows.filter(r => !r.success).length;
+  const counts = { all: currentSmsLogRows.length, delivered: 0, pending: 0, failed: 0 };
+  currentSmsLogRows.forEach(r => { counts[smsLogBucket(r)]++; });
   const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  setText("smsLogCountAll", currentSmsLogRows.length);
-  setText("smsLogCountQueued", queued);
-  setText("smsLogCountFailed", failed);
+  setText("smsLogCountAll", counts.all);
+  setText("smsLogCountDelivered", counts.delivered);
+  setText("smsLogCountPending", counts.pending);
+  setText("smsLogCountFailed", counts.failed);
 }
 function setSmsLogFilter(filter){
   smsLogFilter = filter;
@@ -1579,18 +1590,16 @@ function setSmsLogFilter(filter){
 function renderSmsLogFiltered(){
   const box = document.getElementById("smsLogBody");
   if (!box) return;
-  const rows = currentSmsLogRows.filter(r => {
-    if (smsLogFilter === "queued") return r.success;
-    if (smsLogFilter === "failed") return !r.success;
-    return true;
-  });
+  const rows = smsLogFilter === "all" ? currentSmsLogRows : currentSmsLogRows.filter(r => smsLogBucket(r) === smsLogFilter);
   if (!rows.length){ box.innerHTML = `<tr class="empty-row"><td colspan="6">No ${smsLogFilter === "all" ? "" : smsLogFilter + " "}SMS attempts to show.</td></tr>`; return; }
   box.innerHTML = rows.map(r => {
     const sentAt = r.created_at ? new Date(r.created_at).toLocaleString() : "—";
     const channel = r.termii_channel || "unknown";
-    const statusBadge = r.success
-      ? `<span class="pill pill-ok">Queued (${channel})</span>`
-      : `<span class="pill pill-bad">Failed</span>`;
+    const bucket = smsLogBucket(r);
+    let statusBadge;
+    if (bucket === "delivered") statusBadge = `<span class="pill pill-ok">Delivered</span>`;
+    else if (bucket === "failed") statusBadge = `<span class="pill pill-bad">${r.delivery_status || "Failed to send"}</span>`;
+    else statusBadge = `<span class="pill pill-wait">Pending (${channel})</span>`;
     const msgPreview = (r.body || "").length > 60 ? r.body.slice(0, 60) + "…" : (r.body || "—");
     return `<tr>
       <td class="mono-cell" style="white-space:nowrap;">${sentAt}</td>

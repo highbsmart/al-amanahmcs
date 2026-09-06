@@ -239,17 +239,19 @@
 
     <div id="tab-smslog" class="tab-content" style="display:none;">
       <p style="font-size:13px;color:var(--ink-soft);margin:0 0 20px;">
-        The most recent SMS attempts sent through Termii. "Channel" shows which route was used
-        (<strong>dnd</strong> is for transactional alerts and should reach every number once Termii activates it
-        on our account; <strong>generic</strong> is the fallback route, which cannot reach numbers registered on
-        Do-Not-Disturb). "Queued" means Termii accepted and charged for the message — it does not confirm the
-        handset actually received it. If a member says they didn't receive a message, find it below and click
-        "Resend on other channel" to try the alternate route.
+        The most recent SMS attempts sent through Termii. Once Termii's delivery webhook confirms the real
+        outcome, "Pending" moves to <strong>Delivered</strong> or <strong>Failed</strong> automatically — until
+        then it just means we know Termii accepted and charged for the message, not that it reached the handset.
+        "Channel" shows which route was used (<strong>dnd</strong> is for transactional alerts and should reach
+        every number once Termii activates it on our account; <strong>generic</strong> is the fallback route, which
+        cannot reach numbers registered on Do-Not-Disturb). If a message ends up Failed, click "Resend on other
+        channel" to try the alternate route.
       </p>
       <div class="admin-toolbar">
         <div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;">
           <div class="smslog-filter-tab active" data-filter="all" onclick="setSmsLogFilter('all')">All (<span id="smsLogCountAll">0</span>)</div>
-          <div class="smslog-filter-tab" data-filter="queued" onclick="setSmsLogFilter('queued')">Queued (<span id="smsLogCountQueued">0</span>)</div>
+          <div class="smslog-filter-tab" data-filter="delivered" onclick="setSmsLogFilter('delivered')">Delivered (<span id="smsLogCountDelivered">0</span>)</div>
+          <div class="smslog-filter-tab" data-filter="pending" onclick="setSmsLogFilter('pending')">Pending (<span id="smsLogCountPending">0</span>)</div>
           <div class="smslog-filter-tab" data-filter="failed" onclick="setSmsLogFilter('failed')">Failed (<span id="smsLogCountFailed">0</span>)</div>
         </div>
         <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="renderSmsLog()">&#8635; Refresh</button>
@@ -545,7 +547,7 @@ function watchCapsLock(inputId, warnId) {
 }
 watchCapsLock("adminPass", "capsWarnAdmin");
 </script>
-<script src="js/admin.js?v=25"></script>
+<script src="js/admin.js?v=26"></script>
 <script src="js/reports.js?v=1"></script>
 </body>
 </html>
