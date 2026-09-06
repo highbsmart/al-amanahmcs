@@ -723,6 +723,19 @@ async function getRecentSmsLog(limit = 100) {
   return data || [];
 }
 
+// Resends this month's savings/loan statement SMS to one or more
+// members on demand — independent of the automatic 5th-of-month run.
+// Does not create any new transaction; purely re-sends the notification
+// using each member's current stored figures for the current month.
+async function resendStatementSmsBulk(memberIds, channel = null) {
+  const { data, error } = await supabaseClient.rpc("admin_resend_statement_sms_bulk", {
+    p_member_ids: memberIds,
+    p_channel: channel
+  });
+  if (error) throw error;
+  return data || [];
+}
+
 // Resends a previously-logged SMS on whichever channel it was NOT sent on
 // the first time (dnd <-> generic). The actual channel-flip logic lives in
 // the admin_resend_sms_alternate_channel() database function so it stays

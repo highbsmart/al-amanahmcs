@@ -120,6 +120,9 @@
             <div class="action-menu-label">All members</div>
             <button onclick="pauseResumeAllSavings(true)">Pause savings (all)</button>
             <button onclick="pauseResumeAllSavings(false)">Resume savings (all)</button>
+            <div class="action-menu-divider"></div>
+            <div class="action-menu-label">Notifications</div>
+            <button onclick="resendStatementSmsAllClick()">Resend this month's statement SMS (all active members)</button>
           </div>
         </div>
       </div>
@@ -132,6 +135,8 @@
             <button onclick="pauseResumeSelectedDeductions(true)">Pause deductions (selected)</button>
             <button onclick="pauseResumeSelectedDeductions(false)">Resume deductions (selected)</button>
             <button onclick="markReviewedBulk()">Mark savings review (selected)</button>
+            <div class="action-menu-divider"></div>
+            <button onclick="resendStatementSmsSelectedClick()">Resend this month's statement SMS (selected)</button>
           </div>
         </div>
       </div>
@@ -237,11 +242,17 @@
         The most recent SMS attempts sent through Termii. "Channel" shows which route was used
         (<strong>dnd</strong> is for transactional alerts and should reach every number once Termii activates it
         on our account; <strong>generic</strong> is the fallback route, which cannot reach numbers registered on
-        Do-Not-Disturb). If a member says they didn't receive a message, find it below and click
+        Do-Not-Disturb). "Queued" means Termii accepted and charged for the message — it does not confirm the
+        handset actually received it. If a member says they didn't receive a message, find it below and click
         "Resend on other channel" to try the alternate route.
       </p>
       <div class="admin-toolbar">
-        <button class="btn btn-outline btn-sm" onclick="renderSmsLog()">&#8635; Refresh</button>
+        <div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;">
+          <div class="smslog-filter-tab active" data-filter="all" onclick="setSmsLogFilter('all')">All (<span id="smsLogCountAll">0</span>)</div>
+          <div class="smslog-filter-tab" data-filter="queued" onclick="setSmsLogFilter('queued')">Queued (<span id="smsLogCountQueued">0</span>)</div>
+          <div class="smslog-filter-tab" data-filter="failed" onclick="setSmsLogFilter('failed')">Failed (<span id="smsLogCountFailed">0</span>)</div>
+        </div>
+        <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="renderSmsLog()">&#8635; Refresh</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -514,7 +525,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="js/supabaseClient.js?v=3"></script>
 <script src="js/route-guard.js?v=4"></script>
-<script src="js/data-live.js?v=23"></script>
+<script src="js/data-live.js?v=24"></script>
 <script src="js/main.js?v=5"></script>
 <script>
 function togglePw(id, btn) {
@@ -534,7 +545,7 @@ function watchCapsLock(inputId, warnId) {
 }
 watchCapsLock("adminPass", "capsWarnAdmin");
 </script>
-<script src="js/admin.js?v=24"></script>
+<script src="js/admin.js?v=25"></script>
 <script src="js/reports.js?v=1"></script>
 </body>
 </html>

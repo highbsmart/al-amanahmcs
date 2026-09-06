@@ -1551,29 +1551,56 @@ async function deletePendingDirectoryBulkClick(){
 }
 
 /* ---------- SMS notification log + manual channel resend ---------- */
+let currentSmsLogRows = [];
+let smsLogFilter = "all";
+
 async function renderSmsLog(){
   const box = document.getElementById("smsLogBody");
   if (!box) return;
   try{
-    const rows = await getRecentSmsLog();
-    if (!rows.length){ box.innerHTML = `<tr class="empty-row"><td colspan="6">No SMS attempts recorded yet.</td></tr>`; return; }
-    box.innerHTML = rows.map(r => {
-      const sentAt = r.created_at ? new Date(r.created_at).toLocaleString() : "—";
-      const channel = r.termii_channel || "—";
-      const statusBadge = r.success
-        ? `<span class="pill pill-ok">Queued (${channel})</span>`
-        : `<span class="pill pill-bad">Failed</span>`;
-      const msgPreview = (r.body || "").length > 60 ? r.body.slice(0, 60) + "…" : (r.body || "—");
-      return `<tr>
-        <td class="mono-cell" style="white-space:nowrap;">${sentAt}</td>
-        <td class="mono-cell">${r.recipient || "—"}</td>
-        <td class="mono-cell">${channel}</td>
-        <td>${statusBadge}</td>
-        <td title="${(r.body || "").replace(/"/g, '&quot;')}">${msgPreview}</td>
-        <td><button class="btn btn-outline btn-sm" onclick="resendSmsAlternateChannelClick('${r.id}', '${channel}')">Resend on other channel</button></td>
-      </tr>`;
-    }).join("");
+    currentSmsLogRows = await getRecentSmsLog();
+    updateSmsLogCounts();
+    renderSmsLogFiltered();
   }catch(err){ box.innerHTML = `<tr class="empty-row"><td colspan="6">${err.message || "Could not load SMS log."}</td></tr>`; }
+}
+function updateSmsLogCounts(){
+  const queued = currentSmsLogRows.filter(r => r.success).length;
+  const failed = currentSmsLogRows.filter(r => !r.success).length;
+  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setText("smsLogCountAll", currentSmsLogRows.length);
+  setText("smsLogCountQueued", queued);
+  setText("smsLogCountFailed", failed);
+}
+function setSmsLogFilter(filter){
+  smsLogFilter = filter;
+  document.querySelectorAll(".smslog-filter-tab").forEach(t => t.classList.toggle("active", t.dataset.filter === filter));
+  renderSmsLogFiltered();
+}
+function renderSmsLogFiltered(){
+  const box = document.getElementById("smsLogBody");
+  if (!box) return;
+  const rows = currentSmsLogRows.filter(r => {
+    if (smsLogFilter === "queued") return r.success;
+    if (smsLogFilter === "failed") return !r.success;
+    return true;
+  });
+  if (!rows.length){ box.innerHTML = `<tr class="empty-row"><td colspan="6">No ${smsLogFilter === "all" ? "" : smsLogFilter + " "}SMS attempts to show.</td></tr>`; return; }
+  box.innerHTML = rows.map(r => {
+    const sentAt = r.created_at ? new Date(r.created_at).toLocaleString() : "—";
+    const channel = r.termii_channel || "unknown";
+    const statusBadge = r.success
+      ? `<span class="pill pill-ok">Queued (${channel})</span>`
+      : `<span class="pill pill-bad">Failed</span>`;
+    const msgPreview = (r.body || "").length > 60 ? r.body.slice(0, 60) + "…" : (r.body || "—");
+    return `<tr>
+      <td class="mono-cell" style="white-space:nowrap;">${sentAt}</td>
+      <td class="mono-cell">${r.recipient || "—"}</td>
+      <td class="mono-cell">${channel}</td>
+      <td>${statusBadge}</td>
+      <td title="${(r.body || "").replace(/"/g, '&quot;')}">${msgPreview}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="resendSmsAlternateChannelClick('${r.id}', '${channel}')">Resend on other channel</button></td>
+    </tr>`;
+  }).join("");
 }
 async function resendSmsAlternateChannelClick(logId, currentChannel){
   const altChannel = currentChannel === "dnd" ? "generic" : "dnd";
@@ -1583,4 +1610,27 @@ async function resendSmsAlternateChannelClick(logId, currentChannel){
     toast(`Resend via ${altChannel} queued.`);
     renderSmsLog();
   }catch(err){ toast(err.message || "Could not resend message.", "error"); }
+}
+
+/* ---------- manual "resend this month's statement SMS" ---------- */
+async function resendStatementSmsSelectedClick(){
+  const ids = Array.from(selectedMemberIds || []);
+  if (!ids.length){ toast("Select at least one member first.", "error"); return; }
+  if (!window.confirm(`Resend this month's statement SMS to ${ids.length} selected ${ids.length === 1 ? "member" : "members"}? This only re-sends the notification — it does not create any new charge or deduction.`)) return;
+  await runResendStatementSmsBulk(ids);
+}
+async function resendStatementSmsAllClick(){
+  const activeIds = (currentMembers || []).filter(m => m.status === "active").map(m => m.id);
+  if (!activeIds.length){ toast("No active members found.", "error"); return; }
+  if (!window.confirm(`Resend this month's statement SMS to all ${activeIds.length} active members? This only re-sends the notification — it does not create any new charge or deduction. This may take a moment for a large membership.`)) return;
+  await runResendStatementSmsBulk(activeIds);
+}
+async function runResendStatementSmsBulk(memberIds){
+  try{
+    const results = await resendStatementSmsBulk(memberIds);
+    const sent = results.filter(r => r.processed).length;
+    const skipped = results.length - sent;
+    toast(`Resent to ${sent} member${sent === 1 ? "" : "s"}.${skipped ? ` ${skipped} skipped (nothing to resend this month).` : ""}`);
+    renderSmsLog();
+  }catch(err){ toast(err.message || "Could not resend statement SMS.", "error"); }
 }

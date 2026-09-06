@@ -328,6 +328,9 @@ input[type="checkbox"]{width:auto;padding:0;}
 .admin-tabs{display:flex;gap:6px;border-bottom:1.5px solid rgba(11,59,35,.12);margin-bottom:24px;}
 .admin-tab{padding:12px 18px;font-weight:600;font-size:14px;color:var(--ink-soft);border-bottom:2.5px solid transparent;margin-bottom:-1.5px;}
 .admin-tab.active{color:var(--green-800);border-color:var(--gold);}
+.smslog-filter-tab{padding:8px 16px;font-weight:600;font-size:13px;color:var(--ink-soft);cursor:pointer;}
+.smslog-filter-tab.active{color:var(--green-800);background:var(--wait-bg);}
+.smslog-filter-tab+.smslog-filter-tab{border-left:1px solid var(--line);}
 .stat-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:34px;}
 @media(max-width:760px){.stat-strip{grid-template-columns:1fr 1fr;}}
 .stat-box{background:var(--paper);border-radius:var(--radius-m);padding:20px;box-shadow:var(--shadow-card);border-left:4px solid var(--green-600);}
