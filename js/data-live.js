@@ -736,6 +736,23 @@ async function resendStatementSmsBulk(memberIds, channel = null) {
   return data || [];
 }
 
+// Deletes one or more SMS log entries permanently.
+async function deleteSmsLogEntries(ids) {
+  if (!ids || !ids.length) return 0;
+  const { data, error } = await supabaseClient.rpc("admin_delete_notification_log_entries", { p_ids: ids });
+  if (error) throw error;
+  return data || 0;
+}
+
+// Deletes every SMS log entry currently in one status bucket
+// ('delivered' | 'pending' | 'failed') — matches the classification
+// used on-screen. Returns how many rows were removed.
+async function clearSmsLogByStatus(bucket) {
+  const { data, error } = await supabaseClient.rpc("admin_clear_notification_log_by_status", { p_bucket: bucket });
+  if (error) throw error;
+  return data || 0;
+}
+
 // Resends a previously-logged SMS on whichever channel it was NOT sent on
 // the first time (dnd <-> generic). The actual channel-flip logic lives in
 // the admin_resend_sms_alternate_channel() database function so it stays

@@ -331,6 +331,13 @@ input[type="checkbox"]{width:auto;padding:0;}
 .smslog-filter-tab{padding:8px 16px;font-weight:600;font-size:13px;color:var(--ink-soft);cursor:pointer;}
 .smslog-filter-tab.active{color:var(--green-800);background:var(--wait-bg);}
 .smslog-filter-tab+.smslog-filter-tab{border-left:1px solid var(--line);}
+.smslog-date-group{border:1px solid var(--line);border-radius:var(--radius-s);margin-bottom:14px;overflow:hidden;}
+.smslog-date-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--cream-100,#faf6ec);cursor:pointer;font-weight:600;font-size:13.5px;color:var(--ink);user-select:none;}
+.smslog-date-header:hover{background:var(--wait-bg);}
+.smslog-date-header .chevron{transition:transform .15s ease;font-size:11px;color:var(--ink-soft);}
+.smslog-date-group.collapsed .chevron{transform:rotate(-90deg);}
+.smslog-date-header .date-count{font-weight:400;color:var(--ink-soft);font-size:12.5px;margin-left:2px;}
+.smslog-date-group.collapsed .table-wrap{display:none;}
 .stat-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:34px;}
 @media(max-width:760px){.stat-strip{grid-template-columns:1fr 1fr;}}
 .stat-box{background:var(--paper);border-radius:var(--radius-m);padding:20px;box-shadow:var(--shadow-card);border-left:4px solid var(--green-600);}

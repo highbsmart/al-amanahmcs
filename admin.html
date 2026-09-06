@@ -256,12 +256,17 @@
         </div>
         <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="renderSmsLog()">&#8635; Refresh</button>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Sent</th><th>To</th><th>Channel</th><th>Status</th><th>Message</th><th>Action</th></tr></thead>
-          <tbody id="smsLogBody"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
-        </table>
+      <div class="bulk-toolbar" id="smsLogBulkToolbar" style="display:none;">
+        <span class="bulk-count" id="smsLogBulkCount">0 selected</span>
+        <button class="btn btn-danger btn-sm" onclick="deleteSmsLogSelectedClick()">Delete Selected</button>
       </div>
+      <div class="admin-toolbar" style="margin-top:8px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-soft);">
+          <input type="checkbox" id="smsLogSelectAllVisible" onchange="toggleSelectAllSmsLogVisible(this.checked)"> Select all in view
+        </label>
+        <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="clearSmsLogByCurrentFilterClick()">Clear all in "<span id="smsLogClearFilterLabel">All</span>" view</button>
+      </div>
+      <div id="smsLogGroups"><p class="empty-row" style="padding:16px;">Loading…</p></div>
     </div>
   </div>
 </div>
@@ -527,7 +532,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="js/supabaseClient.js?v=3"></script>
 <script src="js/route-guard.js?v=4"></script>
-<script src="js/data-live.js?v=24"></script>
+<script src="js/data-live.js?v=25"></script>
 <script src="js/main.js?v=5"></script>
 <script>
 function togglePw(id, btn) {
@@ -547,7 +552,7 @@ function watchCapsLock(inputId, warnId) {
 }
 watchCapsLock("adminPass", "capsWarnAdmin");
 </script>
-<script src="js/admin.js?v=26"></script>
+<script src="js/admin.js?v=27"></script>
 <script src="js/reports.js?v=1"></script>
 </body>
 </html>

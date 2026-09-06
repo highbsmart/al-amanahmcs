@@ -1553,23 +1553,29 @@ async function deletePendingDirectoryBulkClick(){
 /* ---------- SMS notification log + manual channel resend ---------- */
 let currentSmsLogRows = [];
 let smsLogFilter = "all";
+let selectedSmsLogIds = new Set();
+let collapsedSmsLogDates = new Set(); // dates the admin has collapsed; everything starts expanded except we auto-collapse all but the newest
 
 async function renderSmsLog(){
-  const box = document.getElementById("smsLogBody");
+  const box = document.getElementById("smsLogGroups");
   if (!box) return;
   try{
     currentSmsLogRows = await getRecentSmsLog();
+    selectedSmsLogIds.clear();
+    updateSmsLogBulkToolbar();
     updateSmsLogCounts();
     renderSmsLogFiltered();
-  }catch(err){ box.innerHTML = `<tr class="empty-row"><td colspan="6">${err.message || "Could not load SMS log."}</td></tr>`; }
+  }catch(err){ box.innerHTML = `<p class="empty-row" style="padding:16px;">${err.message || "Could not load SMS log."}</p>`; }
 }
+
+// A message only counts as truly "delivered" once the webhook says so —
+// Termii's real status text looks like "DELIVERED | Message delivered
+// to handset", not just the bare word "DELIVERED", so we match the
+// start of the string rather than the whole thing.
 function smsLogBucket(r){
-  // "Failed" covers both an immediate send failure (never even queued)
-  // and a webhook-confirmed bad outcome. "Delivered" only counts when
-  // Termii's webhook has actually said so. Everything else is "Pending".
   if (!r.success) return "failed";
   if (r.delivery_status){
-    return String(r.delivery_status).toUpperCase() === "DELIVERED" ? "delivered" : "failed";
+    return String(r.delivery_status).toUpperCase().startsWith("DELIVERED") ? "delivered" : "failed";
   }
   return "pending";
 }
@@ -1585,31 +1591,132 @@ function updateSmsLogCounts(){
 function setSmsLogFilter(filter){
   smsLogFilter = filter;
   document.querySelectorAll(".smslog-filter-tab").forEach(t => t.classList.toggle("active", t.dataset.filter === filter));
+  const label = document.getElementById("smsLogClearFilterLabel");
+  if (label) label.textContent = filter === "all" ? "All" : filter.charAt(0).toUpperCase() + filter.slice(1);
+  selectedSmsLogIds.clear();
+  updateSmsLogBulkToolbar();
+  renderSmsLogFiltered();
+}
+function smsLogDateKey(r){
+  if (!r.created_at) return "Unknown date";
+  const d = new Date(r.created_at);
+  return d.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+}
+function toggleSmsDateGroup(dateKey){
+  if (collapsedSmsLogDates.has(dateKey)) collapsedSmsLogDates.delete(dateKey);
+  else collapsedSmsLogDates.add(dateKey);
   renderSmsLogFiltered();
 }
 function renderSmsLogFiltered(){
-  const box = document.getElementById("smsLogBody");
+  const box = document.getElementById("smsLogGroups");
   if (!box) return;
   const rows = smsLogFilter === "all" ? currentSmsLogRows : currentSmsLogRows.filter(r => smsLogBucket(r) === smsLogFilter);
-  if (!rows.length){ box.innerHTML = `<tr class="empty-row"><td colspan="6">No ${smsLogFilter === "all" ? "" : smsLogFilter + " "}SMS attempts to show.</td></tr>`; return; }
-  box.innerHTML = rows.map(r => {
-    const sentAt = r.created_at ? new Date(r.created_at).toLocaleString() : "—";
-    const channel = r.termii_channel || "unknown";
-    const bucket = smsLogBucket(r);
-    let statusBadge;
-    if (bucket === "delivered") statusBadge = `<span class="pill pill-ok">Delivered</span>`;
-    else if (bucket === "failed") statusBadge = `<span class="pill pill-bad">${r.delivery_status || "Failed to send"}</span>`;
-    else statusBadge = `<span class="pill pill-wait">Pending (${channel})</span>`;
-    const msgPreview = (r.body || "").length > 60 ? r.body.slice(0, 60) + "…" : (r.body || "—");
-    return `<tr>
-      <td class="mono-cell" style="white-space:nowrap;">${sentAt}</td>
-      <td class="mono-cell">${r.recipient || "—"}</td>
-      <td class="mono-cell">${channel}</td>
-      <td>${statusBadge}</td>
-      <td title="${(r.body || "").replace(/"/g, '&quot;')}">${msgPreview}</td>
-      <td><button class="btn btn-outline btn-sm" onclick="resendSmsAlternateChannelClick('${r.id}', '${channel}')">Resend on other channel</button></td>
-    </tr>`;
+  if (!rows.length){ box.innerHTML = `<p class="empty-row" style="padding:16px;">No ${smsLogFilter === "all" ? "" : smsLogFilter + " "}SMS attempts to show.</p>`; return; }
+
+  // Group by calendar date, most recent date first, rows within a date
+  // already newest-first from the query.
+  const groups = [];
+  const groupIndex = new Map();
+  rows.forEach(r => {
+    const key = smsLogDateKey(r);
+    if (!groupIndex.has(key)){ groupIndex.set(key, groups.length); groups.push({ key, rows: [] }); }
+    groups[groupIndex.get(key)].rows.push(r);
+  });
+
+  box.innerHTML = groups.map((g, i) => {
+    const isCollapsed = collapsedSmsLogDates.has(g.key) || (collapsedSmsLogDates.size === 0 && i > 0);
+    const rowsHtml = g.rows.map(r => {
+      const sentAt = r.created_at ? new Date(r.created_at).toLocaleTimeString() : "—";
+      const channel = r.termii_channel || "unknown";
+      const bucket = smsLogBucket(r);
+      let statusBadge;
+      if (bucket === "delivered") statusBadge = `<span class="pill pill-ok">Delivered</span>`;
+      else if (bucket === "failed") statusBadge = `<span class="pill pill-bad">${r.delivery_status || "Failed to send"}</span>`;
+      else statusBadge = `<span class="pill pill-wait">Pending (${channel})</span>`;
+      const msgPreview = (r.body || "").length > 60 ? r.body.slice(0, 60) + "…" : (r.body || "—");
+      const checked = selectedSmsLogIds.has(r.id) ? "checked" : "";
+      return `<tr>
+        <td class="checkbox-cell"><input type="checkbox" class="smslog-row-checkbox" value="${r.id}" ${checked} onchange="toggleSmsLogSelection('${r.id}', this.checked)"></td>
+        <td class="mono-cell" style="white-space:nowrap;">${sentAt}</td>
+        <td class="mono-cell">${r.recipient || "—"}</td>
+        <td class="mono-cell">${channel}</td>
+        <td>${statusBadge}</td>
+        <td title="${(r.body || "").replace(/"/g, '&quot;')}">${msgPreview}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-outline btn-sm" onclick="resendSmsAlternateChannelClick('${r.id}', '${channel}')">Resend</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteSmsLogEntryClick('${r.id}')">Delete</button>
+        </td>
+      </tr>`;
+    }).join("");
+    return `<div class="smslog-date-group${isCollapsed ? " collapsed" : ""}" data-date-key="${g.key}">
+      <div class="smslog-date-header" onclick="toggleSmsDateGroup('${g.key.replace(/'/g, "\\'")}')">
+        <span class="chevron">&#9660;</span> ${g.key} <span class="date-count">(${g.rows.length})</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th class="checkbox-cell"></th><th>Time</th><th>To</th><th>Channel</th><th>Status</th><th>Message</th><th>Action</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    </div>`;
   }).join("");
+}
+function toggleSmsLogSelection(id, checked){
+  if (checked) selectedSmsLogIds.add(id); else selectedSmsLogIds.delete(id);
+  updateSmsLogBulkToolbar();
+}
+function toggleSelectAllSmsLogVisible(checked){
+  document.querySelectorAll(".smslog-row-checkbox").forEach(cb => {
+    cb.checked = checked;
+    if (checked) selectedSmsLogIds.add(cb.value); else selectedSmsLogIds.delete(cb.value);
+  });
+  updateSmsLogBulkToolbar();
+}
+function updateSmsLogBulkToolbar(){
+  const toolbar = document.getElementById("smsLogBulkToolbar");
+  const count = document.getElementById("smsLogBulkCount");
+  if (!toolbar || !count) return;
+  const n = selectedSmsLogIds.size;
+  toolbar.style.display = n > 0 ? "flex" : "none";
+  count.textContent = `${n} selected`;
+}
+async function deleteSmsLogEntryClick(id){
+  if (!window.confirm("Delete this SMS log entry? This cannot be undone.")) return;
+  try{
+    await deleteSmsLogEntries([id]);
+    toast("Deleted.");
+    renderSmsLog();
+  }catch(err){ toast(err.message || "Could not delete.", "error"); }
+}
+async function deleteSmsLogSelectedClick(){
+  const ids = Array.from(selectedSmsLogIds);
+  if (!ids.length) return;
+  if (!window.confirm(`Delete ${ids.length} selected SMS log ${ids.length === 1 ? "entry" : "entries"}? This cannot be undone.`)) return;
+  try{
+    await deleteSmsLogEntries(ids);
+    toast(`Deleted ${ids.length} ${ids.length === 1 ? "entry" : "entries"}.`);
+    renderSmsLog();
+  }catch(err){ toast(err.message || "Could not delete selected entries.", "error"); }
+}
+async function clearSmsLogByCurrentFilterClick(){
+  if (smsLogFilter === "all"){
+    if (!window.confirm(`Delete ALL ${currentSmsLogRows.length} SMS log entries (Delivered, Pending, and Failed)? This cannot be undone.`)) return;
+    try{
+      const ids = currentSmsLogRows.map(r => r.id);
+      await deleteSmsLogEntries(ids);
+      toast(`Cleared ${ids.length} entries.`);
+      renderSmsLog();
+    }catch(err){ toast(err.message || "Could not clear the log.", "error"); }
+    return;
+  }
+  const count = currentSmsLogRows.filter(r => smsLogBucket(r) === smsLogFilter).length;
+  if (!count){ toast("Nothing to clear in this view.", "error"); return; }
+  if (!window.confirm(`Delete all ${count} "${smsLogFilter}" SMS log entries? This cannot be undone.`)) return;
+  try{
+    const removed = await clearSmsLogByStatus(smsLogFilter);
+    toast(`Cleared ${removed} ${smsLogFilter} ${removed === 1 ? "entry" : "entries"}.`);
+    renderSmsLog();
+  }catch(err){ toast(err.message || "Could not clear this view.", "error"); }
 }
 async function resendSmsAlternateChannelClick(logId, currentChannel){
   const altChannel = currentChannel === "dnd" ? "generic" : "dnd";
