@@ -1638,15 +1638,17 @@ function renderSmsLogFiltered(){
       if (bucket === "delivered") statusBadge = `<span class="pill pill-ok">Delivered</span>`;
       else if (bucket === "failed") statusBadge = `<span class="pill pill-bad">${r.delivery_status || "Failed to send"}</span>`;
       else statusBadge = `<span class="pill pill-wait">Pending (${channel})</span>`;
+      if (r.cascade_superseded) statusBadge += ` <span style="font-size:11px;color:var(--ink-soft);">&#8594; escalated to next route</span>`;
       const msgPreview = (r.body || "").length > 60 ? r.body.slice(0, 60) + "…" : (r.body || "—");
       const checked = selectedSmsLogIds.has(r.id) ? "checked" : "";
       const otherProviderLabel = r.sms_provider === "bulksms" ? "Termii" : "BulkSMS";
-      return `<tr>
+      const tierLabel = (typeof r.cascade_step === "number") ? `Tier ${r.cascade_step + 1}` : "";
+      return `<tr${r.cascade_superseded ? ' style="opacity:0.55;"' : ""}>
         <td class="checkbox-cell"><input type="checkbox" class="smslog-row-checkbox" value="${r.id}" ${checked} onchange="toggleSmsLogSelection('${r.id}', this.checked)"></td>
         <td class="mono-cell" style="white-space:nowrap;">${sentAt}</td>
         <td class="mono-cell">${r.recipient || "—"}</td>
         <td class="mono-cell">${provider}</td>
-        <td class="mono-cell">${channel}</td>
+        <td class="mono-cell">${channel}<br><span style="font-size:10.5px;color:var(--ink-soft);">${tierLabel}</span></td>
         <td>${statusBadge}</td>
         <td title="${(r.body || "").replace(/"/g, '&quot;')}">${msgPreview}</td>
         <td style="white-space:nowrap;">
