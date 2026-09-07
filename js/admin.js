@@ -1575,7 +1575,11 @@ async function renderSmsLog(){
 function smsLogBucket(r){
   if (!r.success) return "failed";
   if (r.delivery_status){
-    return String(r.delivery_status).toUpperCase().startsWith("DELIVERED") ? "delivered" : "failed";
+    // Covers Termii's "DELIVERED | ..." wording AND the industry-
+    // standard SMPP status word "DELIVRD" some gateways use (e.g.
+    // possibly BulkSMSNigeria) — but NOT "UNDELIV", which starts
+    // with "UN", not "DELIV".
+    return String(r.delivery_status).toUpperCase().startsWith("DELIV") ? "delivered" : "failed";
   }
   return "pending";
 }
@@ -1628,6 +1632,7 @@ function renderSmsLogFiltered(){
     const rowsHtml = g.rows.map(r => {
       const sentAt = r.created_at ? new Date(r.created_at).toLocaleTimeString() : "—";
       const channel = r.termii_channel || "unknown";
+      const provider = r.sms_provider === "bulksms" ? "BulkSMS" : "Termii";
       const bucket = smsLogBucket(r);
       let statusBadge;
       if (bucket === "delivered") statusBadge = `<span class="pill pill-ok">Delivered</span>`;
@@ -1635,15 +1640,18 @@ function renderSmsLogFiltered(){
       else statusBadge = `<span class="pill pill-wait">Pending (${channel})</span>`;
       const msgPreview = (r.body || "").length > 60 ? r.body.slice(0, 60) + "…" : (r.body || "—");
       const checked = selectedSmsLogIds.has(r.id) ? "checked" : "";
+      const otherProviderLabel = r.sms_provider === "bulksms" ? "Termii" : "BulkSMS";
       return `<tr>
         <td class="checkbox-cell"><input type="checkbox" class="smslog-row-checkbox" value="${r.id}" ${checked} onchange="toggleSmsLogSelection('${r.id}', this.checked)"></td>
         <td class="mono-cell" style="white-space:nowrap;">${sentAt}</td>
         <td class="mono-cell">${r.recipient || "—"}</td>
+        <td class="mono-cell">${provider}</td>
         <td class="mono-cell">${channel}</td>
         <td>${statusBadge}</td>
         <td title="${(r.body || "").replace(/"/g, '&quot;')}">${msgPreview}</td>
         <td style="white-space:nowrap;">
-          <button class="btn btn-outline btn-sm" onclick="resendSmsAlternateChannelClick('${r.id}', '${channel}')">Resend</button>
+          <button class="btn btn-outline btn-sm" onclick="resendSmsAlternateChannelClick('${r.id}', '${channel}', '${r.sms_provider || "termii"}')">Other route</button>
+          <button class="btn btn-outline btn-sm" onclick="resendSmsOtherProviderClick('${r.id}', '${otherProviderLabel}')">Try ${otherProviderLabel}</button>
           <button class="btn btn-danger btn-sm" onclick="deleteSmsLogEntryClick('${r.id}')">Delete</button>
         </td>
       </tr>`;
@@ -1654,7 +1662,7 @@ function renderSmsLogFiltered(){
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th class="checkbox-cell"></th><th>Time</th><th>To</th><th>Channel</th><th>Status</th><th>Message</th><th>Action</th></tr></thead>
+          <thead><tr><th class="checkbox-cell"></th><th>Time</th><th>To</th><th>Provider</th><th>Channel</th><th>Status</th><th>Message</th><th>Action</th></tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>
@@ -1718,14 +1726,25 @@ async function clearSmsLogByCurrentFilterClick(){
     renderSmsLog();
   }catch(err){ toast(err.message || "Could not clear this view.", "error"); }
 }
-async function resendSmsAlternateChannelClick(logId, currentChannel){
-  const altChannel = currentChannel === "dnd" ? "generic" : "dnd";
-  if (!window.confirm(`Resend this message via the ${altChannel} channel?`)) return;
+async function resendSmsAlternateChannelClick(logId, currentChannel, provider){
+  const isBulk = provider === "bulksms";
+  const altLabel = isBulk
+    ? (currentChannel === "international" ? "direct-refund" : "international")
+    : (currentChannel === "dnd" ? "generic" : "dnd");
+  if (!window.confirm(`Resend this message via the ${altLabel} route (same provider)?`)) return;
   try{
     await resendSmsAlternateChannel(logId);
-    toast(`Resend via ${altChannel} queued.`);
+    toast(`Resend via ${altLabel} queued.`);
     renderSmsLog();
   }catch(err){ toast(err.message || "Could not resend message.", "error"); }
+}
+async function resendSmsOtherProviderClick(logId, otherProviderLabel){
+  if (!window.confirm(`Resend this message via ${otherProviderLabel} instead?`)) return;
+  try{
+    await resendSmsOtherProvider(logId);
+    toast(`Resend via ${otherProviderLabel} queued.`);
+    renderSmsLog();
+  }catch(err){ toast(err.message || "Could not resend via the other provider.", "error"); }
 }
 
 /* ---------- manual "resend this month's statement SMS" ---------- */

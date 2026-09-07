@@ -753,6 +753,14 @@ async function clearSmsLogByStatus(bucket) {
   return data || 0;
 }
 
+// Resends a previously-logged SMS via the OTHER provider entirely
+// (Termii <-> BulkSMSNigeria) — the main benefit of running two
+// providers side by side.
+async function resendSmsOtherProvider(notificationLogId) {
+  const { error } = await supabaseClient.rpc("admin_resend_sms_other_provider", { p_notification_log_id: notificationLogId });
+  if (error) throw error;
+}
+
 // Resends a previously-logged SMS on whichever channel it was NOT sent on
 // the first time (dnd <-> generic). The actual channel-flip logic lives in
 // the admin_resend_sms_alternate_channel() database function so it stays
