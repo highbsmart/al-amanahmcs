@@ -29,6 +29,7 @@ async function loadSecretaryOverview() {
     secMemberRegister = members;
 
     renderSecretaryStats();
+    populateAppMonthFilter();
     renderLoanApplicationsRegister();
     renderApprovedMonthlyRegister();
     renderMemberRegister();
@@ -59,15 +60,47 @@ function renderSecretaryStats() {
 }
 
 /* ===================== LOAN APPLICATIONS REGISTER ===================== */
+function currentMonthKey() {
+  const now = new Date();
+  return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+}
+function monthKeyLabel(monthKey) {
+  const parts = monthKey.split("-");
+  return new Date(Number(parts[0]), Number(parts[1]) - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+}
+
+// Builds the Month dropdown from whatever months actually have
+// applications, newest first, defaulting to the current month so the
+// register opens ready for this month's meeting without extra clicks.
+// If the current month has no applications yet, falls back to "All Months".
+function populateAppMonthFilter() {
+  const sel = document.getElementById("appFilterMonth");
+  if (!sel) return;
+  const monthsPresent = new Set(secLoanRegister.map(function (l) { return l.date_applied ? l.date_applied.slice(0, 7) : null; }).filter(Boolean));
+  const sortedMonths = Array.from(monthsPresent).sort().reverse();
+  const nowKey = currentMonthKey();
+  if (!monthsPresent.has(nowKey)) sortedMonths.unshift(nowKey); // still offer current month even if empty
+
+  const previousValue = sel.value;
+  sel.innerHTML = '<option value="">All Months</option>' +
+    sortedMonths.map(function (mk) { return '<option value="' + mk + '">' + monthKeyLabel(mk) + '</option>'; }).join("");
+
+  // Keep whatever the officer had selected if it still exists; otherwise default to current month.
+  sel.value = sortedMonths.includes(previousValue) ? previousValue : nowKey;
+}
+
 function filteredLoanRegister() {
+  const monthEl = document.getElementById("appFilterMonth");
   const statusEl = document.getElementById("appFilterStatus");
   const typeEl = document.getElementById("appFilterType");
   const searchEl = document.getElementById("appFilterSearch");
+  const month = monthEl ? monthEl.value : "";
   const status = statusEl ? statusEl.value : "";
   const type = typeEl ? typeEl.value : "";
   const search = (searchEl ? searchEl.value : "").trim().toLowerCase();
 
   return secLoanRegister.filter(function (l) {
+    if (month && (!l.date_applied || l.date_applied.slice(0, 7) !== month)) return false;
     if (status && l.status !== status) return false;
     if (type && l.type !== type) return false;
     if (search && (l.member_name + " " + l.alamanah_no).toLowerCase().indexOf(search) === -1) return false;
@@ -108,10 +141,12 @@ function statusPill(status) {
 
 function downloadLoanRegisterPdf() {
   const rows = filteredLoanRegister();
+  const monthEl = document.getElementById("appFilterMonth");
+  const monthLabel = monthEl && monthEl.value ? monthKeyLabel(monthEl.value) : "All Months";
   const jsPDF = window.jspdf.jsPDF;
   const doc = new jsPDF({ orientation: "landscape" });
   doc.setFontSize(14); doc.text("Al-Amanah Multi-Purpose Co-operative Society", 14, 14);
-  doc.setFontSize(11); doc.text("Loan Applications Register", 14, 21);
+  doc.setFontSize(11); doc.text("Loan Applications Register \u2014 " + monthLabel, 14, 21);
   doc.setFontSize(9); doc.text("Printed: " + new Date().toLocaleString() + "    Total: " + rows.length + " application(s)", 14, 27);
   doc.autoTable({
     startY: 32,
@@ -123,10 +158,12 @@ function downloadLoanRegisterPdf() {
     }),
     styles: { fontSize: 8 }
   });
-  doc.save("loan-applications-register_" + new Date().toISOString().slice(0, 10) + ".pdf");
+  const fileMonth = monthEl && monthEl.value ? monthEl.value : "all-months";
+  doc.save("loan-applications-register_" + fileMonth + ".pdf");
 }
 function downloadLoanRegisterExcel() {
   const rows = filteredLoanRegister();
+  const monthEl = document.getElementById("appFilterMonth");
   const data = [["Loan ID", "Member", "Al-Amanah No.", "Type", "Amount", "Purpose", "Duration (months)", "Date Applied", "Status", "Date Decision"]];
   rows.forEach(function (l) {
     data.push([l.loan_id, l.member_name, l.alamanah_no,
@@ -136,7 +173,8 @@ function downloadLoanRegisterExcel() {
   const ws = XLSX.utils.aoa_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Loan Applications");
-  XLSX.writeFile(wb, "loan-applications-register_" + new Date().toISOString().slice(0, 10) + ".xlsx");
+  const fileMonth = monthEl && monthEl.value ? monthEl.value : "all-months";
+  XLSX.writeFile(wb, "loan-applications-register_" + fileMonth + ".xlsx");
 }
 
 /* ---------- individual printable Loan Application Form ---------- */
