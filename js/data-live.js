@@ -736,6 +736,23 @@ async function resendStatementSmsBulk(memberIds, channel = null) {
   return data || [];
 }
 
+/* ---------- Secretary administrative registers ---------- */
+async function getSecretaryLoanRegister() {
+  const { data, error } = await supabaseClient.rpc("get_secretary_loan_register");
+  if (error) throw error;
+  return data || [];
+}
+async function getSecretaryMemberRegister() {
+  const { data, error } = await supabaseClient.rpc("get_secretary_member_register");
+  if (error) throw error;
+  return data || [];
+}
+async function getSecretaryLoanDetail(loanId) {
+  const { data, error } = await supabaseClient.rpc("get_secretary_loan_detail", { p_loan_id: loanId });
+  if (error) throw error;
+  return data;
+}
+
 // Deletes one or more SMS log entries permanently.
 async function deleteSmsLogEntries(ids) {
   if (!ids || !ids.length) return 0;
