@@ -79,7 +79,10 @@
       </div>
     </div>
 
-    <h2 style="margin-bottom:14px;">Applications Requiring Assessment</h2>
+    <h2 style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <span>Applications Requiring Assessment</span>
+      <button class="btn btn-outline btn-sm" onclick="openBulkLedgerModal()">&#8593; Bulk Update Member Ledger (CSV)</button>
+    </h2>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Member</th><th>Type</th><th>Amount</th><th>Applied</th><th>Status</th><th>Action</th></tr></thead>
@@ -103,6 +106,26 @@
         <tbody id="treasurerHistoryBody"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
       </table>
     </div>
+  </div>
+</div>
+
+<!-- Bulk ledger update modal -->
+<div class="modal-overlay" id="bulkLedgerModal" hidden>
+  <div class="modal-card modal-card-wide">
+    <div class="modal-header-row"><h3>Bulk Update Member Ledger</h3><button type="button" class="modal-close-x" onclick="closeBulkLedgerModal()" aria-label="Close">&times;</button></div>
+    <p class="lede" style="font-size:13px;margin-bottom:12px;">
+      Upload a CSV to reconcile many members' records at once from your physical ledger, keyed by Al-Amanah No.
+      Columns: <strong>alamanah_no</strong> (required), monthly_savings_amount, savings_balance, total_admin_charges,
+      loan_type (real/commodity/humanitarian), loan_balance, loan_monthly_deduction, loan_admin_charge_balance, months_paid.
+      Leave any column blank in a row to leave that value untouched — only an approved, active loan of the given type will be updated.
+    </p>
+    <a class="btn btn-outline btn-sm" style="margin-bottom:18px;" href="bulk_treasurer_ledger_template.csv" download="bulk_treasurer_ledger_template.csv">&#8681; Download CSV Template</a>
+    <div class="field"><input id="bulkLedgerFile" type="file" accept=".csv,text/csv"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeBulkLedgerModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="submitBulkLedgerUpload()">Upload &amp; Reconcile</button>
+    </div>
+    <div id="bulkLedgerMsg" class="hint" style="margin-top:12px;white-space:pre-line;max-height:260px;overflow:auto;"></div>
   </div>
 </div>
 
@@ -164,10 +187,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabaseClient.js"></script>
-<script src="js/data-live.js?v=22"></script>
+<script src="js/data-live.js?v=27"></script>
 <script src="js/route-guard.js?v=4"></script>
 <script src="js/main.js?v=5"></script>
 <script src="js/officer-portal.js?v=4"></script>
-<script src="js/treasurer.js"></script>
+<script src="js/treasurer.js?v=2"></script>
 </body>
 </html>

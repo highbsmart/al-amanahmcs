@@ -736,6 +736,13 @@ async function resendStatementSmsBulk(memberIds, channel = null) {
   return data || [];
 }
 
+/* ---------- Treasurer bulk ledger reconciliation ---------- */
+async function treasurerBulkUpdateLedger(rows) {
+  const { data, error } = await supabaseClient.rpc("treasurer_bulk_update_ledger", { p_rows: rows });
+  if (error) throw error;
+  return data || [];
+}
+
 /* ---------- Secretary administrative registers ---------- */
 async function getSecretaryLoanRegister() {
   const { data, error } = await supabaseClient.rpc("get_secretary_loan_register");

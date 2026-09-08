@@ -232,6 +232,60 @@ function closeManualOffsetConfirm() {
   currentManualOffsetId = null;
 }
 
+/* ---------- Bulk Update Member Ledger (CSV) ---------- */
+function openBulkLedgerModal() {
+  document.getElementById("bulkLedgerMsg").textContent = "";
+  document.getElementById("bulkLedgerFile").value = "";
+  document.getElementById("bulkLedgerModal").hidden = false;
+}
+function closeBulkLedgerModal() {
+  document.getElementById("bulkLedgerModal").hidden = true;
+}
+
+// Same lightweight CSV parser style already used for the admin's bulk
+// member upload — no external library needed. Assumes no commas
+// inside individual field values (fine for this numeric/code-based
+// template).
+function parseSimpleCsv(text) {
+  const lines = text.trim().split(/\r?\n/);
+  const headers = lines.shift().split(",").map(h => h.trim());
+  return lines.filter(Boolean).map(line => {
+    const values = line.split(",").map(v => v.trim());
+    const row = {};
+    headers.forEach((h, i) => { row[h] = values[i] || ""; });
+    return row;
+  });
+}
+
+async function submitBulkLedgerUpload() {
+  const file = document.getElementById("bulkLedgerFile").files[0];
+  const msg = document.getElementById("bulkLedgerMsg");
+  if (!file) { msg.textContent = "Please choose a CSV file first."; return; }
+
+  msg.textContent = "Reading file…";
+  try {
+    const text = await file.text();
+    const rows = parseSimpleCsv(text);
+    if (!rows.length) throw new Error("The CSV contains no rows.");
+    const withAlamanahNo = rows.filter(r => r.alamanah_no);
+    if (!withAlamanahNo.length) throw new Error("No row has an alamanah_no value — this column is required.");
+
+    msg.textContent = `Reconciling ${withAlamanahNo.length} member${withAlamanahNo.length === 1 ? "" : "s"}…`;
+    const results = await treasurerBulkUpdateLedger(withAlamanahNo);
+
+    const succeeded = results.filter(r => r.processed);
+    const failed = results.filter(r => !r.processed);
+    let summary = `Completed: ${succeeded.length} updated, ${failed.length} failed.\n\n`;
+    summary += results.map(r => `${r.processed ? "✓" : "✗"} ${r.alamanah_no}: ${r.message}`).join("\n");
+    msg.textContent = summary;
+
+    toast(`Bulk ledger update: ${succeeded.length} updated, ${failed.length} failed.`);
+    loadTreasurerHistory();
+  } catch (err) {
+    msg.textContent = "Error: " + (err.message || "Bulk upload failed.");
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("manualOffsetConfirmForm").addEventListener("submit", async (e) => {
     e.preventDefault();
