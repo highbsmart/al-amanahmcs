@@ -56,7 +56,7 @@ function showAdminLogin() {
 }
 
 function switchTab(tab) {
-  document.querySelectorAll(".admin-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+  document.querySelectorAll(".sidebar-link[data-tab]").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
   document.querySelectorAll(".tab-content").forEach(c => c.style.display = "none");
   document.getElementById("tab-" + tab).style.display = "block";
 }

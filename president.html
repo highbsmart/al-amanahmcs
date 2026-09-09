@@ -19,9 +19,6 @@
       <a href="index.html" data-nav="home">Home</a>
     </nav>
     <div class="nav-cta">
-      <button class="btn btn-outline btn-sm" id="officerViewAsMemberBtn" style="display:none;">View as Member</button>
-      <button class="btn btn-outline btn-sm" id="reportProblemBtn" style="display:none;">Report Problem</button>
-      <button class="btn btn-ghost btn-sm" id="officerLogoutBtn" style="display:none;">Log out</button>
       <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
     </div>
   </div>
@@ -41,6 +38,7 @@
 <!-- President login -->
 <div class="auth-shell" id="officerLoginShell" style="display:none;">
   <div class="auth-card">
+    <a href="index.html" style="display:inline-block;font-size:13px;color:var(--green-700);margin-bottom:14px;">&larr; Back to Home</a>
     <div class="brand"><img src="assets/logo.jpg" alt="Crest" style="width:52px;height:52px;"></div>
     <h1>President Portal</h1>
     <p class="lede">Restricted to the Al-Amanah President.</p>
@@ -61,17 +59,59 @@
 
 <!-- President panel -->
 <div id="officerPanel" style="display:none;">
-  <section class="dash-header">
-    <div class="wrap">
-      <div class="dash-welcome">
-        <span>Management Committee</span>
-        <h1>Welcome, <span id="officerWelcomeName"></span></h1>
-        <p style="color:rgba(247,242,228,.75);margin:0;">President workspace &mdash; Al-Amanah MCS</p>
-      </div>
-    </div>
-  </section>
+  <div class="app-shell">
+    <div class="sidebar-backdrop"></div>
 
-  <div class="wrap dash-body">
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <img src="assets/logo.jpg" alt="Al-Amanah crest">
+        <div class="sidebar-brand-text"><strong>Al-Amanah MCS</strong><span>President Portal</span></div>
+      </div>
+      <div class="sidebar-role">Management Committee</div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-link" onclick="scrollToSection('president-decisions')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+          Decisions Awaiting You
+        </div>
+        <div class="sidebar-link" onclick="scrollToSection('president-history')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+          Decision History
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-link" id="officerViewAsMemberBtn" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          View as Member
+        </div>
+        <div class="sidebar-link" id="reportProblemBtn" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Report Problem
+        </div>
+        <div class="sidebar-link" id="officerLogoutBtn" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Log out
+        </div>
+      </div>
+    </aside>
+
+    <div class="app-main">
+      <div class="sidebar-mobile-bar">
+        <img src="assets/logo.jpg" alt="Al-Amanah crest">
+        <strong>President Portal</strong>
+        <button class="sidebar-toggle-btn" aria-label="Open menu">&#9776;</button>
+      </div>
+
+      <section class="dash-header">
+        <div class="wrap">
+          <div class="dash-welcome">
+            <span>Management Committee</span>
+            <h1>Welcome, <span id="officerWelcomeName"></span></h1>
+            <p style="color:rgba(247,242,228,.75);margin:0;">President workspace &mdash; Al-Amanah MCS</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="wrap dash-body">
     <div class="stat-strip">
       <div class="stat-card">
         <div style="font-size:13px;color:var(--ink-soft);">Awaiting your decision</div>
@@ -79,7 +119,7 @@
       </div>
     </div>
 
-    <h2 style="margin-bottom:14px;">Decisions Requiring Your Attention</h2>
+    <h2 id="president-decisions" style="margin-bottom:14px;scroll-margin-top:20px;">Decisions Requiring Your Attention</h2>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Member</th><th>Type</th><th>Amount</th><th>Applied</th><th>Action</th></tr></thead>
@@ -87,12 +127,14 @@
       </table>
     </div>
 
-    <h2 style="margin:32px 0 14px;">Your Decision History</h2>
+    <h2 id="president-history" style="margin:32px 0 14px;scroll-margin-top:20px;">Your Decision History</h2>
     <div class="table-wrap">
       <table>
         <thead><tr><th>When</th><th>Member</th><th>Loan</th><th>Decision</th><th>Note</th></tr></thead>
         <tbody id="presidentHistoryBody"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
       </table>
+    </div>
+      </div>
     </div>
   </div>
 </div>
@@ -139,7 +181,7 @@
 <script src="js/supabaseClient.js"></script>
 <script src="js/data-live.js?v=22"></script>
 <script src="js/route-guard.js?v=4"></script>
-<script src="js/main.js?v=5"></script>
+<script src="js/main.js?v=6"></script>
 <script src="js/officer-portal.js?v=4"></script>
 <script src="js/president.js"></script>
 </body>

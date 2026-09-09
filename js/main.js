@@ -94,9 +94,45 @@ document.addEventListener("click", (e) => {
   }
 });
 
+/* Smooth-scrolls to a section on the same page — used by sidebar
+   anchor links on the single-scroll officer portals (President,
+   Treasurer, Bursary). Also closes the mobile sidebar drawer if open. */
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  const sidebar = document.querySelector(".app-sidebar");
+  const backdrop = document.querySelector(".sidebar-backdrop");
+  if (sidebar) sidebar.classList.remove("open");
+  if (backdrop) backdrop.classList.remove("open");
+}
+
+/* ---------- App shell sidebar (mobile drawer) ----------
+   Generic — works on any page that includes .app-sidebar,
+   .sidebar-toggle-btn, and .sidebar-backdrop, no per-page JS needed. */
+function initSidebarToggle() {
+  const sidebar = document.querySelector(".app-sidebar");
+  const toggleBtn = document.querySelector(".sidebar-toggle-btn");
+  const backdrop = document.querySelector(".sidebar-backdrop");
+  if (!sidebar || !toggleBtn || !backdrop) return;
+
+  const open = () => { sidebar.classList.add("open"); backdrop.classList.add("open"); };
+  const close = () => { sidebar.classList.remove("open"); backdrop.classList.remove("open"); };
+
+  toggleBtn.addEventListener("click", () => {
+    sidebar.classList.contains("open") ? close() : open();
+  });
+  backdrop.addEventListener("click", close);
+  // Close the drawer automatically once a nav link is tapped, so the
+  // person lands on their chosen section instead of an open overlay.
+  sidebar.querySelectorAll(".sidebar-link").forEach(link => {
+    link.addEventListener("click", close);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initNavToggle();
   initReveal();
   markActiveNav();
   showAuthToasts();
+  initSidebarToggle();
 });
