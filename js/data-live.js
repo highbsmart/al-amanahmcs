@@ -594,7 +594,7 @@ function memberSummary(profile, loans) {
   return { approvedLoans, totalMonthlyLoan, totalMonthlyAdmin, totalLoanBalance, totalAdminBalance, totalOriginalObligation, availableLoanBalance };
 }
 
-async function applyForLoan({ type, amount, purpose }) {
+async function applyForLoan({ type, amount, purpose, guarantors }) {
   const user = await getSessionUser();
   const t = LOAN_TYPES[type];
   const duration = t.duration;
@@ -607,13 +607,39 @@ async function applyForLoan({ type, amount, purpose }) {
     throw new Error("You already have a pending or active application for this loan type. Complete or offset it before applying again.");
   }
   const totalObligation = amount + adminCharge;
+  const loanId = uid("LN");
   const { error } = await supabaseClient.from("loans").insert({
-    id: uid("LN"),
+    id: loanId,
     member_id: user.id,
     type, amount, purpose, duration,
     admin_charge: adminCharge,
     monthly_deduction: Math.round(totalObligation / duration),
     admin_monthly_deduction: 0
+  });
+  if (error) throw error;
+
+  if (guarantors && guarantors.length === 2) {
+    const { error: gError } = await supabaseClient.rpc("submit_loan_guarantors", {
+      p_loan_id: loanId,
+      p_guarantors: guarantors
+    });
+    if (gError) throw gError;
+  }
+
+  return loanId;
+}
+
+/* ---------- Loan guarantors ---------- */
+async function getLoanGuarantors(loanId) {
+  const { data, error } = await supabaseClient.rpc("get_loan_guarantors", { p_loan_id: loanId });
+  if (error) throw error;
+  return data || [];
+}
+async function verifyLoanGuarantorForm(loanId, guarantorNumber, received) {
+  const { error } = await supabaseClient.rpc("verify_loan_guarantor_form", {
+    p_loan_id: loanId,
+    p_guarantor_number: guarantorNumber,
+    p_received: received
   });
   if (error) throw error;
 }

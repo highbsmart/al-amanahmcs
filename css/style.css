@@ -348,7 +348,12 @@ input[type="checkbox"]{width:auto;padding:0;}
    so the content area can breathe. Desktop: fixed sidebar, content
    scrolls beside it. Mobile: sidebar becomes a slide-in drawer.
    ========================================================= */
-body[data-page-role]:not([data-page-role="public"]) .site-header{display:none;}
+body[data-page-role="admin"] .site-header,
+body[data-page-role="president"] .site-header,
+body[data-page-role="treasurer"] .site-header,
+body[data-page-role="secretary"] .site-header,
+body[data-page-role="bursary"] .site-header,
+body[data-page-role="member"] .site-header{display:none;}
 
 .app-shell{display:flex;align-items:stretch;min-height:100vh;}
 .app-sidebar{

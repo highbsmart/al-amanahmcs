@@ -252,6 +252,20 @@ async function printLoanApplicationForm(loanId) {
       styles: { fontSize: 9 }
     });
 
+    y = doc.lastAutoTable.finalY + 8;
+    const guarantors = detail.guarantors || [];
+    doc.autoTable({
+      startY: y,
+      head: [["Guarantors", ""]],
+      body: [1, 2].map(function (num) {
+        const g = guarantors.find(function (x) { return x.guarantor_number === num; });
+        if (!g) return ["Guarantor " + num, "Not submitted"];
+        return ["Guarantor " + num, g.full_name + " \u2014 " + g.phone + " (" + g.relationship + ") \u2014 " +
+          (g.form_received ? "Signed form RECEIVED" : "Signed form NOT yet received")];
+      }),
+      styles: { fontSize: 9 }
+    });
+
     y = doc.lastAutoTable.finalY + 20;
     doc.setFontSize(9);
     doc.text("_______________________", 14, y);

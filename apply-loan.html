@@ -23,12 +23,72 @@
       <a href="index.html" data-nav="home">Home</a>
     </nav>
     <div class="nav-cta">
-      <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
       <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
     </div>
   </div>
 </header>
 
+<div class="app-shell">
+  <div class="sidebar-backdrop"></div>
+
+  <aside class="app-sidebar">
+    <div class="sidebar-brand">
+      <img src="assets/logo.jpg" alt="Al-Amanah crest">
+      <div class="sidebar-brand-text"><strong>Al-Amanah MCS</strong><span>Member Portal</span></div>
+    </div>
+    <div class="sidebar-role">My Account</div>
+    <nav class="sidebar-nav">
+      <a href="index.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Home
+      </a>
+      <a href="dashboard.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="savings.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Savings
+      </a>
+      <a href="loans.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Loans
+      </a>
+      <a href="transactions.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Transactions
+      </a>
+      <a href="payslip.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+        Payslip
+      </a>
+      <a href="apply-loan.html" class="sidebar-link active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Apply for Loan
+      </a>
+      <a href="loan-info.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        Loan Products
+      </a>
+      <a href="profile.html" class="sidebar-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        My Profile
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-link" id="logoutBtn" style="background:none;border:none;font-family:inherit;text-align:left;width:100%;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Log out
+      </button>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <div class="sidebar-mobile-bar">
+      <img src="assets/logo.jpg" alt="Al-Amanah crest">
+      <strong>Apply for Loan</strong>
+      <button class="sidebar-toggle-btn" aria-label="Open menu">&#9776;</button>
+    </div>
 <section class="section-tight">
   <div class="wrap" style="max-width:760px;">
     <span class="eyebrow">Loan application</span>
@@ -57,6 +117,31 @@
         <textarea id="purpose" placeholder="Briefly describe what this loan is for…" required></textarea>
       </div>
 
+      <div class="form-note" style="margin:22px 0 16px;">
+        <strong>Two guarantors are required</strong><br>
+        Every loan needs two guarantors who will each sign a printed Guarantor Form acknowledging their
+        guarantee in writing. Enter their details below — you'll get a printable form immediately after
+        submitting, ready for both guarantors to sign.
+      </div>
+
+      <div class="ledger-card" style="margin-bottom:18px;">
+        <div class="ledger-head"><div><span class="ledger-tag">Guarantor 1</span></div></div>
+        <div class="field"><label for="g1Name">Full name</label><input type="text" id="g1Name" required></div>
+        <div class="field"><label for="g1Phone">Phone number</label><input type="tel" id="g1Phone" required></div>
+        <div class="field"><label for="g1Relationship">Relationship to you</label><input type="text" id="g1Relationship" placeholder="e.g. Colleague, Head of Department, Family" required></div>
+        <div class="field"><label for="g1AlamanahNo">Al-Amanah No. (if also a member — optional)</label><input type="text" id="g1AlamanahNo" placeholder="AL/000"></div>
+        <div class="field"><label for="g1Department">Department (optional)</label><input type="text" id="g1Department"></div>
+      </div>
+
+      <div class="ledger-card" style="margin-bottom:22px;">
+        <div class="ledger-head"><div><span class="ledger-tag">Guarantor 2</span></div></div>
+        <div class="field"><label for="g2Name">Full name</label><input type="text" id="g2Name" required></div>
+        <div class="field"><label for="g2Phone">Phone number</label><input type="tel" id="g2Phone" required></div>
+        <div class="field"><label for="g2Relationship">Relationship to you</label><input type="text" id="g2Relationship" placeholder="e.g. Colleague, Head of Department, Family" required></div>
+        <div class="field"><label for="g2AlamanahNo">Al-Amanah No. (if also a member — optional)</label><input type="text" id="g2AlamanahNo" placeholder="AL/000"></div>
+        <div class="field"><label for="g2Department">Department (optional)</label><input type="text" id="g2Department"></div>
+      </div>
+
       <div class="form-error" id="applyError"></div>
 
       <div class="form-note" style="margin-bottom:22px;">
@@ -80,6 +165,8 @@
     </form>
   </div>
 </section>
+  </div>
+</div>
 
 <footer class="site-footer">
   <div class="wrap">
@@ -91,10 +178,12 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="js/supabaseClient.js?v=2"></script>
-<script src="js/data-live.js?v=22"></script>
+<script src="js/data-live.js?v=27"></script>
 <script src="js/route-guard.js?v=4"></script>
-<script src="js/main.js?v=5"></script>
-<script src="js/apply-loan.js?v=3"></script>
+<script src="js/main.js?v=6"></script>
+<script src="js/apply-loan.js?v=4"></script>
 </body>
 </html>

@@ -86,9 +86,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (amount > max) { errBox.textContent = `Amount exceeds your eligible maximum of ${formatNaira(max)} for this loan type.`; errBox.classList.add("show"); return; }
     if (!purpose) { errBox.textContent = "Please state the purpose of this loan."; errBox.classList.add("show"); return; }
 
+    const guarantors = [1, 2].map(n => ({
+      full_name: document.getElementById(`g${n}Name`).value.trim(),
+      phone: document.getElementById(`g${n}Phone`).value.trim(),
+      relationship: document.getElementById(`g${n}Relationship`).value.trim(),
+      alamanah_no: document.getElementById(`g${n}AlamanahNo`).value.trim(),
+      department: document.getElementById(`g${n}Department`).value.trim()
+    }));
+    for (const [i, g] of guarantors.entries()) {
+      if (!g.full_name || !g.phone || !g.relationship) {
+        errBox.textContent = `Please complete all required fields for Guarantor ${i + 1} (name, phone, relationship).`;
+        errBox.classList.add("show");
+        return;
+      }
+    }
+    if (guarantors[0].phone === guarantors[1].phone) {
+      errBox.textContent = "The two guarantors must have different phone numbers.";
+      errBox.classList.add("show");
+      return;
+    }
+
     submitBtn.disabled = true; submitBtn.textContent = "Submitting…";
     try {
-      await applyForLoan({ type: selectedType, amount, purpose });
+      const loanId = await applyForLoan({ type: selectedType, amount, purpose, guarantors });
+      printGuarantorForm(loanId, { type: selectedType, amount, purpose }, guarantors);
       window.location.href = "dashboard.html?applied=1";
     } catch (err) {
       errBox.textContent = err.message || "Could not submit application. Please try again.";
@@ -97,3 +118,61 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 });
+
+/* ---------- Printable Guarantor Form ----------
+   Generated immediately on successful submission, so the member can
+   print it right away and get both guarantors to sign in writing. */
+function printGuarantorForm(loanId, loan, guarantors) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFontSize(15); doc.text("Al-Amanah Multi-Purpose Co-operative Society", 14, 18);
+  doc.setFontSize(12); doc.text("Loan Guarantor Form", 14, 27);
+  doc.setFontSize(9); doc.text(`Loan ID: ${loanId}    Printed: ${new Date().toLocaleString()}`, 14, 33);
+
+  doc.autoTable({
+    startY: 40,
+    head: [["Applicant & Loan Details", ""]],
+    body: [
+      ["Applicant", `${applicant.first_name} ${applicant.surname}`],
+      ["Al-Amanah No.", applicant.alamanah_no],
+      ["Loan Type", LOAN_TYPES[loan.type].label],
+      ["Amount Requested", formatNaira(loan.amount)],
+      ["Purpose", loan.purpose],
+    ],
+    styles: { fontSize: 9 }
+  });
+
+  const declaration = "I, the undersigned, confirm that I have been made fully aware of and agree to act as a " +
+    "guarantor for the loan described above. I understand that if the applicant defaults on repayment, I may " +
+    "be held responsible for settling the outstanding balance in accordance with the cooperative's bylaws.";
+
+  guarantors.forEach((g, i) => {
+    let y = doc.lastAutoTable.finalY + 12;
+    if (y > 230) { doc.addPage(); y = 20; }
+    doc.setFontSize(11); doc.text(`Guarantor ${i + 1}`, 14, y);
+    doc.autoTable({
+      startY: y + 4,
+      body: [
+        ["Full Name", g.full_name],
+        ["Phone", g.phone],
+        ["Relationship to Applicant", g.relationship],
+        ["Al-Amanah No. (if member)", g.alamanah_no || "—"],
+        ["Department", g.department || "—"],
+      ],
+      styles: { fontSize: 9 }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+    doc.setFontSize(8.5);
+    const lines = doc.splitTextToSize(declaration, 180);
+    doc.text(lines, 14, y);
+    y += lines.length * 4.2 + 14;
+    doc.setFontSize(9);
+    doc.text("_______________________", 14, y);
+    doc.text("_______________________", 110, y);
+    doc.text("Guarantor's Signature", 14, y + 6);
+    doc.text("Date", 110, y + 6);
+  });
+
+  doc.save(`guarantor-form_${loanId}.pdf`);
+}
