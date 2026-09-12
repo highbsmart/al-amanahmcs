@@ -169,12 +169,23 @@ function printGuarantorForm(loanId, loan, guarantors) {
     "guarantor for the loan described above. I understand that if the applicant defaults on repayment, I may " +
     "be held responsible for settling the outstanding balance in accordance with the cooperative's bylaws.";
 
+  // Tracked manually rather than relying on doc.lastAutoTable.finalY,
+  // since that value only updates after a table — it doesn't account
+  // for the declaration text or signature lines drawn with plain
+  // doc.text() calls below each guarantor's table. Without tracking
+  // this ourselves, the second guarantor's section starts drawing
+  // where the first guarantor's TABLE ended, overlapping everything
+  // printed below it.
+  let cursorY = doc.lastAutoTable.finalY;
+
   guarantors.forEach((g, i) => {
-    let y = doc.lastAutoTable.finalY + 12;
-    if (y > 230) { doc.addPage(); y = 20; }
-    doc.setFontSize(11); doc.text(`Guarantor ${i + 1}`, 14, y);
+    cursorY += 14;
+    if (cursorY > 220) { doc.addPage(); cursorY = 20; }
+    doc.setFontSize(12); doc.setFont(undefined, "bold"); doc.text(`Guarantor ${i + 1}`, 14, cursorY);
+    doc.setFont(undefined, "normal");
+
     doc.autoTable({
-      startY: y + 4,
+      startY: cursorY + 4,
       body: [
         ["Full Name", g.full_name],
         ["Phone", g.phone],
@@ -184,16 +195,20 @@ function printGuarantorForm(loanId, loan, guarantors) {
       ],
       styles: { fontSize: 9 }
     });
-    y = doc.lastAutoTable.finalY + 8;
+    cursorY = doc.lastAutoTable.finalY + 8;
+
     doc.setFontSize(8.5);
     const lines = doc.splitTextToSize(declaration, 180);
-    doc.text(lines, 14, y);
-    y += lines.length * 4.2 + 14;
+    doc.text(lines, 14, cursorY);
+    cursorY += lines.length * 4.2 + 16;
+
+    if (cursorY > 260) { doc.addPage(); cursorY = 20; }
     doc.setFontSize(9);
-    doc.text("_______________________", 14, y);
-    doc.text("_______________________", 110, y);
-    doc.text("Guarantor's Signature", 14, y + 6);
-    doc.text("Date", 110, y + 6);
+    doc.text("_______________________", 14, cursorY);
+    doc.text("_______________________", 110, cursorY);
+    doc.text("Guarantor's Signature", 14, cursorY + 6);
+    doc.text("Date", 110, cursorY + 6);
+    cursorY += 6;
   });
 
   doc.save(`guarantor-form_${loanId}.pdf`);
