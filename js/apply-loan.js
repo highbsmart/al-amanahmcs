@@ -109,8 +109,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     submitBtn.disabled = true; submitBtn.textContent = "Submitting…";
     try {
       const loanId = await applyForLoan({ type: selectedType, amount, purpose, guarantors });
-      printGuarantorForm(loanId, { type: selectedType, amount, purpose }, guarantors);
-      window.location.href = "dashboard.html?applied=1";
+      showGuarantorFormSuccess(loanId, { type: selectedType, amount, purpose }, guarantors);
     } catch (err) {
       errBox.textContent = err.message || "Could not submit application. Please try again.";
       errBox.classList.add("show");
@@ -118,6 +117,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 });
+
+/* ---------- Success screen after submission ----------
+   Shown instead of auto-downloading + immediately redirecting, since
+   some browsers cancel a just-started download if the page navigates
+   away before it finishes — this way the person explicitly clicks to
+   download, then explicitly continues. */
+function showGuarantorFormSuccess(loanId, loan, guarantors) {
+  document.getElementById("loanForm").style.display = "none";
+  const successBox = document.createElement("div");
+  successBox.innerHTML = `
+    <div class="form-note" style="margin-bottom:22px;">
+      <strong>Application submitted successfully.</strong><br>
+      Loan ID: ${loanId}. Download the Guarantor Form below, get both guarantors to sign it in writing,
+      and submit it to the cooperative office as part of your application.
+    </div>
+    <button type="button" class="btn btn-primary btn-block" id="downloadGuarantorFormBtn" style="margin-bottom:14px;">&#8681; Download Guarantor Form (PDF)</button>
+    <a href="dashboard.html?applied=1" class="btn btn-outline btn-block">Continue to Dashboard</a>
+  `;
+  document.getElementById("loanForm").insertAdjacentElement("afterend", successBox);
+  document.getElementById("downloadGuarantorFormBtn").addEventListener("click", () => {
+    printGuarantorForm(loanId, loan, guarantors);
+  });
+}
 
 /* ---------- Printable Guarantor Form ----------
    Generated immediately on successful submission, so the member can
