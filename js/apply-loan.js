@@ -143,73 +143,8 @@ function showGuarantorFormSuccess(loanId, loan, guarantors) {
 
 /* ---------- Printable Guarantor Form ----------
    Generated immediately on successful submission, so the member can
-   print it right away and get both guarantors to sign in writing. */
+   print it right away and get both guarantors to sign in writing.
+   Uses the shared generator in data-live.js. */
 function printGuarantorForm(loanId, loan, guarantors) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  doc.setFontSize(15); doc.text("Al-Amanah Multi-Purpose Co-operative Society", 14, 18);
-  doc.setFontSize(12); doc.text("Loan Guarantor Form", 14, 27);
-  doc.setFontSize(9); doc.text(`Loan ID: ${loanId}    Printed: ${new Date().toLocaleString()}`, 14, 33);
-
-  doc.autoTable({
-    startY: 40,
-    head: [["Applicant & Loan Details", ""]],
-    body: [
-      ["Applicant", `${applicant.first_name} ${applicant.surname}`],
-      ["Al-Amanah No.", applicant.alamanah_no],
-      ["Loan Type", LOAN_TYPES[loan.type].label],
-      ["Amount Requested", formatNaira(loan.amount)],
-      ["Purpose", loan.purpose],
-    ],
-    styles: { fontSize: 9 }
-  });
-
-  const declaration = "I, the undersigned, confirm that I have been made fully aware of and agree to act as a " +
-    "guarantor for the loan described above. I understand that if the applicant defaults on repayment, I may " +
-    "be held responsible for settling the outstanding balance in accordance with the cooperative's bylaws.";
-
-  // Tracked manually rather than relying on doc.lastAutoTable.finalY,
-  // since that value only updates after a table — it doesn't account
-  // for the declaration text or signature lines drawn with plain
-  // doc.text() calls below each guarantor's table. Without tracking
-  // this ourselves, the second guarantor's section starts drawing
-  // where the first guarantor's TABLE ended, overlapping everything
-  // printed below it.
-  let cursorY = doc.lastAutoTable.finalY;
-
-  guarantors.forEach((g, i) => {
-    cursorY += 14;
-    if (cursorY > 220) { doc.addPage(); cursorY = 20; }
-    doc.setFontSize(12); doc.setFont(undefined, "bold"); doc.text(`Guarantor ${i + 1}`, 14, cursorY);
-    doc.setFont(undefined, "normal");
-
-    doc.autoTable({
-      startY: cursorY + 4,
-      body: [
-        ["Full Name", g.full_name],
-        ["Phone", g.phone],
-        ["Relationship to Applicant", g.relationship],
-        ["Al-Amanah No. (if member)", g.alamanah_no || "—"],
-        ["Department", g.department || "—"],
-      ],
-      styles: { fontSize: 9 }
-    });
-    cursorY = doc.lastAutoTable.finalY + 8;
-
-    doc.setFontSize(8.5);
-    const lines = doc.splitTextToSize(declaration, 180);
-    doc.text(lines, 14, cursorY);
-    cursorY += lines.length * 4.2 + 16;
-
-    if (cursorY > 260) { doc.addPage(); cursorY = 20; }
-    doc.setFontSize(9);
-    doc.text("_______________________", 14, cursorY);
-    doc.text("_______________________", 110, cursorY);
-    doc.text("Guarantor's Signature", 14, cursorY + 6);
-    doc.text("Date", 110, cursorY + 6);
-    cursorY += 6;
-  });
-
-  doc.save(`guarantor-form_${loanId}.pdf`);
+  generateGuarantorFormPdf(loanId, applicant, loan, guarantors);
 }

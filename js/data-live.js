@@ -629,6 +629,77 @@ async function applyForLoan({ type, amount, purpose, guarantors }) {
   return loanId;
 }
 
+/* ---------- Shared Guarantor Form PDF generator ----------
+   Used by both apply-loan.js (right after submission) and loans.js
+   (to reprint later if the member navigated away before downloading).
+   Requires jsPDF + jspdf-autotable to already be loaded on the page. */
+function generateGuarantorFormPdf(loanId, member, loan, guarantors) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFontSize(15); doc.text("Al-Amanah Multi-Purpose Co-operative Society", 14, 18);
+  doc.setFontSize(12); doc.text("Loan Guarantor Form", 14, 27);
+  doc.setFontSize(9); doc.text(`Loan ID: ${loanId}    Printed: ${new Date().toLocaleString()}`, 14, 33);
+
+  doc.autoTable({
+    startY: 40,
+    head: [["Applicant & Loan Details", ""]],
+    body: [
+      ["Applicant", `${member.first_name} ${member.surname}`],
+      ["Al-Amanah No.", member.alamanah_no],
+      ["Loan Type", LOAN_TYPES[loan.type] ? LOAN_TYPES[loan.type].label : loan.type],
+      ["Amount Requested", formatNaira(loan.amount)],
+      ["Purpose", loan.purpose],
+    ],
+    styles: { fontSize: 9 }
+  });
+
+  const declaration = "I, the undersigned, confirm that I have been made fully aware of and agree to act as a " +
+    "guarantor for the loan described above. I understand that if the applicant defaults on repayment, I may " +
+    "be held responsible for settling the outstanding balance in accordance with the cooperative's bylaws.";
+
+  // Tracked manually rather than relying on doc.lastAutoTable.finalY,
+  // since that value only updates after a table — it doesn't account
+  // for the declaration text or signature lines drawn with plain
+  // doc.text() calls below each guarantor's table.
+  let cursorY = doc.lastAutoTable.finalY;
+
+  guarantors.forEach((g, i) => {
+    cursorY += 14;
+    if (cursorY > 220) { doc.addPage(); cursorY = 20; }
+    doc.setFontSize(12); doc.setFont(undefined, "bold"); doc.text(`Guarantor ${i + 1}`, 14, cursorY);
+    doc.setFont(undefined, "normal");
+
+    doc.autoTable({
+      startY: cursorY + 4,
+      body: [
+        ["Full Name", g.full_name],
+        ["Phone", g.phone],
+        ["Relationship to Applicant", g.relationship],
+        ["Al-Amanah No. (if member)", g.alamanah_no || "—"],
+        ["Department", g.department || "—"],
+      ],
+      styles: { fontSize: 9 }
+    });
+    cursorY = doc.lastAutoTable.finalY + 8;
+
+    doc.setFontSize(8.5);
+    const lines = doc.splitTextToSize(declaration, 180);
+    doc.text(lines, 14, cursorY);
+    cursorY += lines.length * 4.2 + 16;
+
+    if (cursorY > 260) { doc.addPage(); cursorY = 20; }
+    doc.setFontSize(9);
+    doc.text("_______________________", 14, cursorY);
+    doc.text("_______________________", 110, cursorY);
+    doc.text("Guarantor's Signature", 14, cursorY + 6);
+    doc.text("Date", 110, cursorY + 6);
+    cursorY += 6;
+  });
+
+  doc.save(`guarantor-form_${loanId}.pdf`);
+}
+
 /* ---------- Loan guarantors ---------- */
 async function getLoanGuarantors(loanId) {
   const { data, error } = await supabaseClient.rpc("get_loan_guarantors", { p_loan_id: loanId });

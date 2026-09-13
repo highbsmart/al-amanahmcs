@@ -47,7 +47,7 @@
         Dashboard
       </a>
       <a href="savings.html" class="sidebar-link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
         Savings
       </a>
       <a href="loans.html" class="sidebar-link active">
@@ -103,7 +103,7 @@
   <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>Loan ID</th><th>Type</th><th>Amount</th><th>Balance</th><th>Monthly</th><th>Progress</th><th>Applied</th><th></th></tr>
+        <tr><th>Loan ID</th><th>Type</th><th>Amount</th><th>Balance</th><th>Monthly</th><th>Progress</th><th>Applied</th><th></th><th></th></tr>
       </thead>
       <tbody id="loansTableBody">
         <tr class="empty-row"><td colspan="8">Loading your loan records…</td></tr>
@@ -176,11 +176,13 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="js/supabaseClient.js?v=3"></script>
-<script src="js/data-live.js?v=22"></script>
+<script src="js/data-live.js?v=27"></script>
 <script src="js/main.js?v=6"></script>
 <script src="js/route-guard.js?v=4"></script>
-<script src="js/loans.js?v=2"></script>
+<script src="js/loans.js?v=3"></script>
 <script src="js/loan-offset.js"></script>
 </body>
 </html>

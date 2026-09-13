@@ -89,8 +89,22 @@ function renderLoansTable() {
       <td>${renderProgress(l.status, l.status === "declined")} <span style="font-size:11px;color:var(--ink-soft)">${statusPillText(l.status, l.workflow_status)}</span></td>
       <td>${formatDate(l.date_applied)}</td>
       <td>${action}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="reprintGuarantorForm('${l.id}')">Guarantor Form</button></td>
     </tr>`;
   }).join("");
+}
+
+async function reprintGuarantorForm(loanId) {
+  try {
+    const loan = myLoans.find(l => l.id === loanId);
+    if (!loan) { toast("Loan not found.", "error"); return; }
+    const guarantors = await getLoanGuarantors(loanId);
+    if (!guarantors.length) { toast("No guarantor records were saved for this application.", "error"); return; }
+    const member = await getMyProfile();
+    generateGuarantorFormPdf(loanId, member, loan, guarantors);
+  } catch (err) {
+    toast(err.message || "Could not generate the guarantor form.", "error");
+  }
 }
 
 function showLoanDetails() {
