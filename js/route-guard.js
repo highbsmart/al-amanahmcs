@@ -145,6 +145,10 @@
     }
 
     applyNavVisibility(profile);
+
+    // Everything above either redirected away (page never gets this
+    // far) or has now settled on the correct content — safe to reveal.
+    document.body.style.visibility = "visible";
   }
 
   // Toggles nav links tagged with data-nav="..." to match who's
@@ -170,4 +174,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", enforceRouteAccess);
+  // Safety net: if something above throws or hangs unexpectedly,
+  // never leave the page permanently invisible.
+  setTimeout(() => { document.body.style.visibility = "visible"; }, 4000);
 })();

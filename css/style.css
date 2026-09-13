@@ -348,7 +348,13 @@ input[type="checkbox"]{width:auto;padding:0;}
    so the content area can breathe. Desktop: fixed sidebar, content
    scrolls beside it. Mobile: sidebar becomes a slide-in drawer.
    ========================================================= */
-body[data-page-role="admin"] .site-header,
+/* Hides the page until route-guard.js finishes checking who's signed
+   in and settles on the right content (correct redirect, correct nav
+   state, correct sidebar/header). Without this, every page briefly
+   flashes its "logged out" or default state first, then swaps —
+   visible as things like a "Member Login" button flickering before
+   the real portal UI appears. */
+body[data-page-role]{visibility:hidden;}
 body[data-page-role="president"] .site-header,
 body[data-page-role="treasurer"] .site-header,
 body[data-page-role="secretary"] .site-header,
@@ -509,7 +515,17 @@ body[data-page-role="member"] .site-header{display:none;}
    display:none instead actually removes that space, so the printed
    page is exactly as tall as the real document and prints as 1 page. */
 @media print {
-  body > *:not(.modal-overlay):not(.print-page) { display: none !important; }
+  /* .print-page now lives nested inside .app-shell > .app-main (since
+     the sidebar redesign), not as a direct child of <body> like this
+     rule originally assumed — that mismatch was hiding the ENTIRE
+     .app-shell wrapper (including the payslip content nested inside
+     it) on print, producing a blank page. Fixed by keeping the
+     ancestor chain down to .print-page visible, and only hiding the
+     sidebar chrome itself. */
+  body > *:not(.modal-overlay):not(.print-page):not(.app-shell) { display: none !important; }
+  .app-shell { display: block !important; height: auto !important; }
+  .app-sidebar, .sidebar-backdrop, .sidebar-mobile-bar { display: none !important; }
+  .app-main { display: block !important; width: 100% !important; }
   .modal-overlay[hidden] { display: none !important; }
   .modal-overlay:not([hidden]) { position: static !important; background: none !important; padding: 0 !important; display: block !important; }
   .modal-card { box-shadow: none !important; max-height: none !important; overflow: visible !important; max-width: none !important; padding: 0 !important; margin: 0 !important; }

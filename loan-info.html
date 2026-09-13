@@ -7,7 +7,7 @@
 <link rel="icon" href="assets/logo.jpg">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body style="visibility:hidden;">
 
 <header class="site-header" id="publicHeader">
   <div class="wrap nav">
@@ -193,7 +193,16 @@
       // Not logged in, or profile fetch failed — just show the normal
       // public page, no error needed.
     }
+    // Whichever layout was chosen above is now fully in place —
+    // safe to reveal. Doing this only now (rather than leaving the
+    // page visible by default) is what prevents the public header
+    // from flashing on screen for a moment before swapping to the
+    // member sidebar.
+    document.body.style.visibility = "visible";
   });
+  // Safety net: never leave the page permanently invisible if
+  // something above throws or hangs unexpectedly.
+  setTimeout(() => { document.body.style.visibility = "visible"; }, 4000);
 </script>
 </body>
 </html>
