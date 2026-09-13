@@ -536,6 +536,7 @@ body[data-page-role="member"] .site-header{display:none;}
 /* ---------- Professional payslip document ---------- */
 .payslip-doc{max-width:480px;margin:0 auto;font-family:var(--font-body);}
 .payslip-letterhead{text-align:center;margin-bottom:18px;padding-bottom:14px;border-bottom:3px solid var(--gold);}
+.payslip-logo{width:56px;height:56px;border-radius:50%;object-fit:cover;margin-bottom:8px;}
 .payslip-letterhead h2{margin:0 0 4px;font-family:var(--font-display);font-size:1.2rem;color:var(--green-800);}
 .payslip-letterhead p{margin:0;color:var(--ink-soft);font-size:12px;letter-spacing:.06em;text-transform:uppercase;}
 .payslip-meta{margin-bottom:18px;}

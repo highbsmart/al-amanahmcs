@@ -35,6 +35,7 @@ async function renderPayslip() {
   box.innerHTML = `
     <div id="payslipPrintArea" class="payslip-doc">
       <div class="payslip-letterhead">
+        <img src="assets/logo.jpg" alt="Al-Amanah crest" class="payslip-logo">
         <h2>Al-Amanah Multi-Purpose Co-operative Society</h2>
         <p>Monthly Deduction Payslip — ${monthLabel}</p>
       </div>

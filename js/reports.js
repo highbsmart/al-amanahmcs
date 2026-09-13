@@ -161,12 +161,12 @@ function downloadFinancialPdf() {
     startY: 36,
     head: [["Item", "Amount (NGN)"]],
     body: [
-      ["Savings contributions received", formatNaira(f.savingsIn)],
-      ["Savings adjustments (net corrections)", formatNaira(f.savingsAdjustmentsNet)],
-      ["Administrative charges collected", formatNaira(f.adminChargesCollected)],
-      ["Loan principal disbursed", formatNaira(f.loanDisbursed)],
-      ["Loan repayments collected", formatNaira(f.loanRepaid)],
-      ["Net cash movement (period)", formatNaira(f.netMovement)],
+      ["Savings contributions received", formatNairaPdf(f.savingsIn)],
+      ["Savings adjustments (net corrections)", formatNairaPdf(f.savingsAdjustmentsNet)],
+      ["Administrative charges collected", formatNairaPdf(f.adminChargesCollected)],
+      ["Loan principal disbursed", formatNairaPdf(f.loanDisbursed)],
+      ["Loan repayments collected", formatNairaPdf(f.loanRepaid)],
+      ["Net cash movement (period)", formatNairaPdf(f.netMovement)],
     ],
   });
   const y2 = doc.lastAutoTable.finalY + 10;
@@ -175,9 +175,9 @@ function downloadFinancialPdf() {
     startY: y2 + 4,
     head: [["Item", "Amount (NGN)"]],
     body: [
-      ["Total member savings", formatNaira(f.totalSavingsNow)],
-      ["Total admin charges accumulated (all-time)", formatNaira(f.totalAdminChargesNow)],
-      ["Total outstanding loan balance", formatNaira(f.totalOutstandingNow)],
+      ["Total member savings", formatNairaPdf(f.totalSavingsNow)],
+      ["Total admin charges accumulated (all-time)", formatNairaPdf(f.totalAdminChargesNow)],
+      ["Total outstanding loan balance", formatNairaPdf(f.totalOutstandingNow)],
     ],
   });
   doc.save(`financial-statement_${reportFileLabel()}.pdf`);
@@ -219,7 +219,7 @@ function downloadLoanRequestsPdf() {
     head: [["Loan ID", "Member", "Al-Amanah No.", "Type", "Amount", "Duration", "Applied", "Status"]],
     body: reportData.loanRequests.map(l => [
       l.id, l.memberName, l.memberNo, LOAN_TYPES[l.type] ? LOAN_TYPES[l.type].label : l.type,
-      formatNaira(l.amount), `${l.duration} mo.`, formatDate(l.date_applied), l.status
+      formatNairaPdf(l.amount), `${l.duration} mo.`, formatDate(l.date_applied), l.status
     ]),
     styles: { fontSize: 8 },
   });
@@ -254,7 +254,7 @@ function downloadApprovedByTypePdf() {
     doc.autoTable({
       startY: y + 3,
       head: [["Loan ID", "Member", "Al-Amanah No.", "Amount", "Decision Date", "Status"]],
-      body: list.map(l => [l.id, l.memberName, l.memberNo, formatNaira(l.amount), formatDate(l.date_decision), l.status]),
+      body: list.map(l => [l.id, l.memberName, l.memberNo, formatNairaPdf(l.amount), formatDate(l.date_decision), l.status]),
       styles: { fontSize: 8 },
     });
     y = doc.lastAutoTable.finalY + 10;

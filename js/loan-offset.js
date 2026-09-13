@@ -204,13 +204,20 @@ function openOffsetLetter(id) {
   if (!r) { box.innerHTML = `<p class="hint">Could not find this payment.</p>`; document.getElementById("offsetLetterModal").hidden = false; return; }
 
   const items = r.loan_offset_request_items || [];
+  const loanTypeNames = items.map(item => `${(item.loan_type || "").toUpperCase()} LOAN`);
+  const loanTypesPhrase = loanTypeNames.length <= 1
+    ? (loanTypeNames[0] || "loan")
+    : loanTypeNames.length === 2
+      ? loanTypeNames.join(" and ")
+      : loanTypeNames.slice(0, -1).join(", ") + ", and " + loanTypeNames[loanTypeNames.length - 1];
+
   box.innerHTML = `
     <div id="offsetLetterPrintArea" class="payslip-doc" style="max-width:600px;text-align:left;">
       <p style="text-align:right;">Date: ${new Date().toLocaleDateString()}</p>
       <p><strong>The President</strong><br>Al-Amanah Multi-Purpose Cooperative Society</p>
       <h3 style="text-align:center;text-decoration:underline;margin:20px 0;">APPLICATION FOR LOAN OFFSET</h3>
       <p>Dear Sir,</p>
-      <p>I, <strong>${profile.first_name} ${profile.surname}</strong>, with Membership ID <strong>${profile.alamanah_no}</strong>, respectfully write to formally notify the Cooperative of my request and successful payment for the offset of my outstanding loan obligation(s).</p>
+      <p>I, <strong>${profile.first_name} ${profile.surname}</strong>, with Membership ID <strong>${profile.alamanah_no}</strong>, respectfully write to formally notify the Cooperative of my request and successful payment for the offset of my <strong>${loanTypesPhrase}</strong> outstanding obligation(s).</p>
       <p>The loan(s) offset are as follows:</p>
       <div class="payslip-section">
         <div class="payslip-section-title">Loan Type — Outstanding Balance — Amount Paid</div>

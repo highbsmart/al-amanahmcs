@@ -154,7 +154,7 @@ function downloadLoanRegisterPdf() {
     body: rows.map(function (l) {
       return [l.loan_id, l.member_name, l.alamanah_no,
         LOAN_TYPES[l.type] ? LOAN_TYPES[l.type].label : l.type,
-        formatNaira(l.amount), l.purpose, formatDate(l.date_applied), l.status];
+        formatNairaPdf(l.amount), l.purpose, formatDate(l.date_applied), l.status];
     }),
     styles: { fontSize: 8 }
   });
@@ -208,7 +208,7 @@ async function printLoanApplicationForm(loanId) {
       head: [["Loan Details", ""]],
       body: [
         ["Loan Type", LOAN_TYPES[l.type] ? LOAN_TYPES[l.type].label : l.type],
-        ["Amount Requested", formatNaira(l.amount)],
+        ["Amount Requested", formatNairaPdf(l.amount)],
         ["Purpose", l.purpose],
         ["Duration", l.duration + " months"],
         ["Date Applied", formatDate(l.date_applied)],
@@ -383,7 +383,7 @@ function downloadApprovedMonthlyRegisterPdf() {
       doc.autoTable({
         startY: y + 3,
         head: [["Loan ID", "Member", "Al-Amanah No.", "Amount", "Decided", "Status"]],
-        body: list.map(function (l) { return [l.loan_id, l.member_name, l.alamanah_no, formatNaira(l.amount), formatDate(l.date_decision), l.status]; }),
+        body: list.map(function (l) { return [l.loan_id, l.member_name, l.alamanah_no, formatNairaPdf(l.amount), formatDate(l.date_decision), l.status]; }),
         styles: { fontSize: 8 }
       });
       y = doc.lastAutoTable.finalY + 10;
@@ -449,7 +449,7 @@ function downloadMemberRegisterPdf() {
     head: [["Al-Amanah No.", "Name", "Department", "Phone", "Status", "Joined", "Savings Balance"]],
     body: rows.map(function (m) {
       return [m.alamanah_no, m.first_name + " " + m.surname, m.department || "\u2014", m.phone || "\u2014",
-        m.status, m.joined ? formatDate(m.joined) : "\u2014", formatNaira(m.savings_balance)];
+        m.status, m.joined ? formatDate(m.joined) : "\u2014", formatNairaPdf(m.savings_balance)];
     }),
     styles: { fontSize: 8 }
   });

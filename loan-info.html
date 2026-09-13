@@ -151,7 +151,7 @@
     </div>
 
     <div class="center" style="margin-top:56px;">
-      <a href="login.html" class="btn btn-gold">Log in to apply</a>
+      <a href="login.html" class="btn btn-gold" id="loanInfoCta">Log in to apply</a>
     </div>
   </div>
 </section>
@@ -167,7 +167,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabaseClient.js"></script>
-<script src="js/data-live.js?v=27"></script>
+<script src="js/data-live.js?v=28"></script>
 <script src="js/main.js?v=6"></script>
 <script>
   // If a plain member is already logged in, swap the public marketing
@@ -188,6 +188,8 @@
           await logoutUser();
           window.location.href = "index.html?loggedout=1";
         });
+        const cta = document.getElementById("loanInfoCta");
+        if (cta) { cta.textContent = "Apply for a loan"; cta.href = "apply-loan.html"; }
       }
     } catch (err) {
       // Not logged in, or profile fetch failed — just show the normal

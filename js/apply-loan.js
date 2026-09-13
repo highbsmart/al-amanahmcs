@@ -145,6 +145,6 @@ function showGuarantorFormSuccess(loanId, loan, guarantors) {
    Generated immediately on successful submission, so the member can
    print it right away and get both guarantors to sign in writing.
    Uses the shared generator in data-live.js. */
-function printGuarantorForm(loanId, loan, guarantors) {
-  generateGuarantorFormPdf(loanId, applicant, loan, guarantors);
+async function printGuarantorForm(loanId, loan, guarantors) {
+  await generateGuarantorFormPdf(loanId, applicant, loan, guarantors);
 }

@@ -101,7 +101,7 @@ async function reprintGuarantorForm(loanId) {
     const guarantors = await getLoanGuarantors(loanId);
     if (!guarantors.length) { toast("No guarantor records were saved for this application.", "error"); return; }
     const member = await getMyProfile();
-    generateGuarantorFormPdf(loanId, member, loan, guarantors);
+    await generateGuarantorFormPdf(loanId, member, loan, guarantors);
   } catch (err) {
     toast(err.message || "Could not generate the guarantor form.", "error");
   }

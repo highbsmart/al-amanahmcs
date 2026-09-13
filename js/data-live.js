@@ -46,6 +46,40 @@ function formatNaira(n) {
   const val = Number(n) || 0;
   return "₦" + val.toLocaleString("en-NG", { maximumFractionDigits: 0 });
 }
+
+// jsPDF's built-in fonts (Helvetica etc.) cannot render the ₦ glyph at
+// all — it prints as a broken/garbled character. Every PDF-generating
+// function should use THIS formatter for amounts instead of
+// formatNaira(). HTML pages and Excel exports are unaffected (real
+// system fonts render ₦ fine there) and should keep using formatNaira().
+function formatNairaPdf(n) {
+  const val = Number(n) || 0;
+  return "NGN " + val.toLocaleString("en-NG", { maximumFractionDigits: 0 });
+}
+
+// Loads assets/logo.jpg as a data URL so jsPDF's doc.addImage() can
+// embed it — jsPDF can only draw images it already has the raw data
+// for, not a URL it fetches itself. Cached after the first call since
+// every PDF on the site uses the same logo.
+let _cachedLogoDataUrl = null;
+async function loadCooperativeLogoDataUrl() {
+  if (_cachedLogoDataUrl) return _cachedLogoDataUrl;
+  try {
+    const response = await fetch("assets/logo.jpg");
+    const blob = await response.blob();
+    _cachedLogoDataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    return _cachedLogoDataUrl;
+  } catch (err) {
+    console.warn("Could not load cooperative logo for PDF:", err);
+    return null;
+  }
+}
+
 function formatDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -632,26 +666,55 @@ async function applyForLoan({ type, amount, purpose, guarantors }) {
 /* ---------- Shared Guarantor Form PDF generator ----------
    Used by both apply-loan.js (right after submission) and loans.js
    (to reprint later if the member navigated away before downloading).
-   Requires jsPDF + jspdf-autotable to already be loaded on the page. */
-function generateGuarantorFormPdf(loanId, member, loan, guarantors) {
+   Requires jsPDF + jspdf-autotable to already be loaded on the page.
+   Async because it loads the logo image before drawing. */
+async function generateGuarantorFormPdf(loanId, member, loan, guarantors) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
 
-  doc.setFontSize(15); doc.text("Al-Amanah Multi-Purpose Co-operative Society", 14, 18);
-  doc.setFontSize(12); doc.text("Loan Guarantor Form", 14, 27);
-  doc.setFontSize(9); doc.text(`Loan ID: ${loanId}    Printed: ${new Date().toLocaleString()}`, 14, 33);
+  // Brand colors, matching the site's green/gold palette.
+  const GREEN = [14, 74, 44];      // --green-800
+  const GOLD = [200, 165, 61];     // --gold
+  const CREAM = [247, 242, 228];   // --cream
+
+  // Letterhead: solid green header band across the full page width,
+  // logo on the left, cooperative name + form title on the right.
+  doc.setFillColor(...GREEN);
+  doc.rect(0, 0, pageWidth, 32, "F");
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(1.2);
+  doc.line(0, 32, pageWidth, 32);
+
+  const logoDataUrl = await loadCooperativeLogoDataUrl();
+  if (logoDataUrl) {
+    try { doc.addImage(logoDataUrl, "JPEG", 12, 6, 20, 20); } catch (e) { /* fall through without logo */ }
+  }
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14); doc.setFont(undefined, "bold");
+  doc.text("Al-Amanah Multi-Purpose Co-operative Society", 38, 15);
+  doc.setFont(undefined, "normal"); doc.setFontSize(10);
+  doc.setTextColor(228, 200, 118); // gold-light
+  doc.text("Loan Guarantor Form", 38, 23);
+
+  doc.setTextColor(40, 40, 40);
+  doc.setFontSize(8.5); doc.setFont(undefined, "normal");
+  doc.text(`Loan ID: ${loanId}    Printed: ${new Date().toLocaleString()}`, 12, 40);
 
   doc.autoTable({
-    startY: 40,
+    startY: 45,
     head: [["Applicant & Loan Details", ""]],
     body: [
       ["Applicant", `${member.first_name} ${member.surname}`],
       ["Al-Amanah No.", member.alamanah_no],
       ["Loan Type", LOAN_TYPES[loan.type] ? LOAN_TYPES[loan.type].label : loan.type],
-      ["Amount Requested", formatNaira(loan.amount)],
+      ["Amount Requested", formatNairaPdf(loan.amount)],
       ["Purpose", loan.purpose],
     ],
-    styles: { fontSize: 9 }
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: GREEN, textColor: 255 },
+    alternateRowStyles: { fillColor: CREAM }
   });
 
   const declaration = "I, the undersigned, confirm that I have been made fully aware of and agree to act as a " +
@@ -666,9 +729,10 @@ function generateGuarantorFormPdf(loanId, member, loan, guarantors) {
 
   guarantors.forEach((g, i) => {
     cursorY += 14;
-    if (cursorY > 220) { doc.addPage(); cursorY = 20; }
-    doc.setFontSize(12); doc.setFont(undefined, "bold"); doc.text(`Guarantor ${i + 1}`, 14, cursorY);
-    doc.setFont(undefined, "normal");
+    if (cursorY > 225) { doc.addPage(); cursorY = 20; }
+    doc.setFontSize(12); doc.setFont(undefined, "bold"); doc.setTextColor(...GREEN);
+    doc.text(`Guarantor ${i + 1}`, 14, cursorY);
+    doc.setFont(undefined, "normal"); doc.setTextColor(40, 40, 40);
 
     doc.autoTable({
       startY: cursorY + 4,
@@ -679,7 +743,8 @@ function generateGuarantorFormPdf(loanId, member, loan, guarantors) {
         ["Al-Amanah No. (if member)", g.alamanah_no || "—"],
         ["Department", g.department || "—"],
       ],
-      styles: { fontSize: 9 }
+      styles: { fontSize: 9 },
+      alternateRowStyles: { fillColor: CREAM }
     });
     cursorY = doc.lastAutoTable.finalY + 8;
 
@@ -688,14 +753,25 @@ function generateGuarantorFormPdf(loanId, member, loan, guarantors) {
     doc.text(lines, 14, cursorY);
     cursorY += lines.length * 4.2 + 16;
 
-    if (cursorY > 260) { doc.addPage(); cursorY = 20; }
+    if (cursorY > 265) { doc.addPage(); cursorY = 20; }
+    doc.setDrawColor(120, 120, 120);
+    doc.line(14, cursorY, 80, cursorY);
+    doc.line(110, cursorY, 176, cursorY);
     doc.setFontSize(9);
-    doc.text("_______________________", 14, cursorY);
-    doc.text("_______________________", 110, cursorY);
     doc.text("Guarantor's Signature", 14, cursorY + 6);
     doc.text("Date", 110, cursorY + 6);
     cursorY += 6;
   });
+
+  // Footer, on every page.
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFontSize(7.5);
+    doc.setTextColor(120, 120, 120);
+    doc.text("Al-Amanah Multi-Purpose Co-operative Society — Loan Guarantor Form", 14, 287);
+    doc.text(`Page ${p} of ${pageCount}`, pageWidth - 30, 287);
+  }
 
   doc.save(`guarantor-form_${loanId}.pdf`);
 }
