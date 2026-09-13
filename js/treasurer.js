@@ -59,6 +59,16 @@ function vettingBadge(status) {
   return `<span class="pill ${m.cls}">${m.label}</span>`;
 }
 
+async function toggleGuarantorReceived(loanId, guarantorNumber, checked) {
+  try {
+    await verifyLoanGuarantorForm(loanId, guarantorNumber, checked);
+    toast(checked ? `Guarantor ${guarantorNumber}'s form confirmed received.` : `Guarantor ${guarantorNumber}'s confirmation removed.`);
+    openAssessmentModal(loanId); // refresh to update the "Both Confirmed" badge
+  } catch (err) {
+    toast(err.message || "Could not update guarantor status.", "error");
+  }
+}
+
 async function openAssessmentModal(loanId) {
   currentAssessmentLoanId = loanId;
   const box = document.getElementById("assessmentModalBody");
@@ -66,10 +76,28 @@ async function openAssessmentModal(loanId) {
   document.getElementById("assessmentModal").hidden = false;
 
   try {
-    const [summary, vetting] = await Promise.all([
+    const [summary, vetting, guarantors] = await Promise.all([
       getLoanFinancialSummary(loanId),
-      getVettingForLoan(loanId)
+      getVettingForLoan(loanId),
+      getLoanGuarantors(loanId)
     ]);
+    const bothConfirmed = guarantors.length === 2 && guarantors.every(g => g.form_received);
+    const guarantorRows = [1, 2].map(num => {
+      const g = guarantors.find(x => x.guarantor_number === num);
+      if (!g) return `<div class="hint" style="margin-bottom:8px;">Guarantor ${num}: not submitted with this application.</div>`;
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);">
+          <div>
+            <strong>Guarantor ${num}:</strong> ${g.full_name} — ${g.phone}<br>
+            <span class="hint">${g.relationship}${g.alamanah_no ? " · " + g.alamanah_no : ""}${g.department ? " · " + g.department : ""}</span>
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:13px;">
+            <input type="checkbox" ${g.form_received ? "checked" : ""} onchange="toggleGuarantorReceived('${loanId}', ${num}, this.checked)">
+            Signed form received
+          </label>
+        </div>`;
+    }).join("");
+
     box.innerHTML = `
       <div class="stat-strip" style="grid-template-columns:1fr 1fr;margin-bottom:20px;">
         <div class="stat-card"><div class="hint">Member</div><div style="font-weight:700;">${summary.member_name}</div><div class="hint">${summary.alamanah_no}</div></div>
@@ -80,6 +108,12 @@ async function openAssessmentModal(loanId) {
         <div class="stat-card"><div class="hint">Projected New Deduction</div><div style="font-weight:700;">${formatNaira(summary.projected_new_deduction)}</div></div>
       </div>
       <p class="hint" style="margin-bottom:16px;"><strong>Purpose:</strong> ${summary.purpose}</p>
+
+      <div class="vetting-ledger" style="margin-bottom:20px;">
+        <div class="vetting-ledger-title">Guarantors ${bothConfirmed ? '<span class="pill pill-ok" style="margin-left:8px;">Both Confirmed</span>' : '<span class="pill pill-wait" style="margin-left:8px;">Awaiting Confirmation</span>'}</div>
+        ${guarantorRows}
+        <p class="hint" style="margin-top:8px;">Acknowledge each guarantor's signed form once received — this is shared with Bursary, so either office can confirm.</p>
+      </div>
 
       <div class="form-note" style="margin-bottom:20px;">
         <strong>Bursary Officer's Vetting</strong><br>
