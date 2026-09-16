@@ -1,0 +1,150 @@
+let applicant = null;
+let selectedType = null;
+
+function renderTypePicker() {
+  const picker = document.getElementById("typePicker");
+  picker.innerHTML = Object.entries(LOAN_TYPES).map(([key, t]) => `
+    <div class="type-option" data-type="${key}" onclick="selectType('${key}')">
+      <h4>${t.label}</h4>
+      <p>${t.desc}</p>
+    </div>`).join("");
+}
+
+function selectType(key) {
+  selectedType = key;
+  document.querySelectorAll(".type-option").forEach(el => el.classList.toggle("selected", el.dataset.type === key));
+  const t = LOAN_TYPES[key];
+  const max = loanEligibleAmount(key, applicant.savings_balance);
+  const capNote = t.mode === "multiplier"
+    ? `3× your ${formatNaira(applicant.savings_balance)} savings`
+    : `flat maximum for this loan type`;
+  document.getElementById("amountHint").textContent = `Maximum eligible for ${t.label}: ${formatNaira(max)} (${capNote}).`;
+  document.getElementById("amount").max = max;
+  document.getElementById("amount").value = "";
+
+  document.getElementById("durationField").style.display = "block";
+  document.getElementById("durationDisplay").value = `${t.duration} months (fixed)`;
+
+  updatePreview();
+}
+
+function updatePreview() {
+  const errBox = document.getElementById("applyError");
+  errBox.classList.remove("show");
+  const amount = Number(document.getElementById("amount").value);
+  const preview = document.getElementById("previewCard");
+  if (!selectedType || !amount) { preview.style.display = "none"; return; }
+  const t = LOAN_TYPES[selectedType];
+  const duration = t.duration;
+  const fee = Math.round(amount * t.feeRate);
+  const totalRepayable = amount + fee;
+  const monthly = Math.round(totalRepayable / duration);
+  const feeMonthly = 0;
+
+  const feeRow = document.getElementById("prevFeeRow");
+  const adminMonthlyRow = document.getElementById("prevAdminMonthlyRow");
+  if (t.feeRate > 0) {
+    feeRow.style.display = "flex";
+    adminMonthlyRow.style.display = "flex";
+    document.getElementById("prevFeeLabel").textContent = t.feeLabel;
+    document.getElementById("prevAdminCharge").textContent = formatNaira(fee);
+    document.getElementById("prevAdminMonthly").textContent = "Included in total obligation";
+  } else {
+    feeRow.style.display = "none";
+    adminMonthlyRow.style.display = "none";
+  }
+
+  document.getElementById("prevTotalRepayable").textContent = formatNaira(totalRepayable);
+  document.getElementById("prevMonthly").textContent = formatNaira(monthly);
+  document.getElementById("prevTotal").textContent = formatNaira(monthly + feeMonthly);
+  preview.style.display = "block";
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  applicant = await requireMemberSession();
+  if (!applicant) return;
+
+  document.getElementById("eligibilityNote").innerHTML =
+    `Your current savings balance is <strong>${formatNaira(applicant.savings_balance)}</strong>. Choose a loan type below to see your eligible amount.`;
+
+  renderTypePicker();
+  document.getElementById("amount").addEventListener("input", updatePreview);
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => { await logoutUser(); window.location.href = "index.html?loggedout=1"; });
+
+  document.getElementById("loanForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errBox = document.getElementById("applyError");
+    const amount = Number(document.getElementById("amount").value);
+    const purpose = document.getElementById("purpose").value.trim();
+    const submitBtn = e.target.querySelector("button[type=submit]");
+
+    if (!selectedType) { errBox.textContent = "Please select a loan type."; errBox.classList.add("show"); return; }
+    const t = LOAN_TYPES[selectedType];
+    const max = loanEligibleAmount(selectedType, applicant.savings_balance);
+    if (!amount || amount <= 0) { errBox.textContent = "Please enter a valid loan amount."; errBox.classList.add("show"); return; }
+    if (amount > max) { errBox.textContent = `Amount exceeds your eligible maximum of ${formatNaira(max)} for this loan type.`; errBox.classList.add("show"); return; }
+    if (!purpose) { errBox.textContent = "Please state the purpose of this loan."; errBox.classList.add("show"); return; }
+
+    const guarantors = [1, 2].map(n => ({
+      full_name: document.getElementById(`g${n}Name`).value.trim(),
+      phone: document.getElementById(`g${n}Phone`).value.trim(),
+      relationship: document.getElementById(`g${n}Relationship`).value.trim(),
+      alamanah_no: document.getElementById(`g${n}AlamanahNo`).value.trim(),
+      department: document.getElementById(`g${n}Department`).value.trim()
+    }));
+    for (const [i, g] of guarantors.entries()) {
+      if (!g.full_name || !g.phone || !g.relationship) {
+        errBox.textContent = `Please complete all required fields for Guarantor ${i + 1} (name, phone, relationship).`;
+        errBox.classList.add("show");
+        return;
+      }
+    }
+    if (guarantors[0].phone === guarantors[1].phone) {
+      errBox.textContent = "The two guarantors must have different phone numbers.";
+      errBox.classList.add("show");
+      return;
+    }
+
+    submitBtn.disabled = true; submitBtn.textContent = "Submitting…";
+    try {
+      const loanId = await applyForLoan({ type: selectedType, amount, purpose, guarantors });
+      showGuarantorFormSuccess(loanId, { type: selectedType, amount, purpose }, guarantors);
+    } catch (err) {
+      errBox.textContent = err.message || "Could not submit application. Please try again.";
+      errBox.classList.add("show");
+      submitBtn.disabled = false; submitBtn.textContent = "Submit application for review";
+    }
+  });
+});
+
+/* ---------- Success screen after submission ----------
+   Shown instead of auto-downloading + immediately redirecting, since
+   some browsers cancel a just-started download if the page navigates
+   away before it finishes — this way the person explicitly clicks to
+   download, then explicitly continues. */
+function showGuarantorFormSuccess(loanId, loan, guarantors) {
+  document.getElementById("loanForm").style.display = "none";
+  const successBox = document.createElement("div");
+  successBox.innerHTML = `
+    <div class="form-note" style="margin-bottom:22px;">
+      <strong>Application submitted successfully.</strong><br>
+      Loan ID: ${loanId}. Download the Guarantor Form below, get both guarantors to sign it in writing,
+      and submit it to the cooperative office as part of your application.
+    </div>
+    <button type="button" class="btn btn-primary btn-block" id="downloadGuarantorFormBtn" style="margin-bottom:14px;">&#8681; Download Guarantor Form (PDF)</button>
+    <a href="dashboard.html?applied=1" class="btn btn-outline btn-block">Continue to Dashboard</a>
+  `;
+  document.getElementById("loanForm").insertAdjacentElement("afterend", successBox);
+  document.getElementById("downloadGuarantorFormBtn").addEventListener("click", () => {
+    printGuarantorForm(loanId, loan, guarantors);
+  });
+}
+
+/* ---------- Printable Guarantor Form ----------
+   Generated immediately on successful submission, so the member can
+   print it right away and get both guarantors to sign in writing.
+   Uses the shared generator in data-live.js. */
+async function printGuarantorForm(loanId, loan, guarantors) {
+  await generateGuarantorFormPdf(loanId, applicant, loan, guarantors);
+}
