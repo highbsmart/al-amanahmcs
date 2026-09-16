@@ -361,13 +361,14 @@ body[data-page-role="secretary"] .site-header,
 body[data-page-role="bursary"] .site-header,
 body[data-page-role="member"] .site-header{display:none;}
 
-.app-shell{display:flex;align-items:stretch;min-height:100vh;}
+.app-shell{display:block;min-height:100vh;}
 .app-sidebar{
-  width:78px;flex-shrink:0;background:var(--green-900);color:var(--cream);
-  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:hidden;
+  width:78px;background:var(--green-900);color:var(--cream);
+  display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
   z-index:40;transition:width .2s ease;
 }
-.app-sidebar:hover{width:264px;overflow-y:auto;}
+.app-sidebar:hover{width:264px;}
 .app-sidebar::-webkit-scrollbar{width:6px;}
 .app-sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px;}
 
@@ -397,13 +398,18 @@ body[data-page-role="member"] .site-header{display:none;}
 .sidebar-footer .sidebar-link{color:rgba(247,242,228,.72);font-size:13.5px;}
 .sidebar-footer .sidebar-link:hover{color:#fff;}
 
-.app-main{flex:1;min-width:0;}
+/* The sidebar is fixed and out of normal document flow, so .app-main
+   needs its own left margin to avoid sitting underneath it — this is
+   also what makes the sidebar scroll completely independently of the
+   page: the page scrolls .app-main's content, the sidebar scrolls
+   itself, and neither affects the other. */
+.app-main{margin-left:78px;min-width:0;}
 
 .sidebar-mobile-bar{display:none;}
 .sidebar-backdrop{display:none;}
 
 @media (max-width: 900px){
-  .app-shell{display:block;}
+  .app-main{margin-left:0;}
   .sidebar-mobile-bar{
     display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--green-900);
     color:var(--cream);position:sticky;top:0;z-index:45;
@@ -416,8 +422,8 @@ body[data-page-role="member"] .site-header{display:none;}
     display:flex;align-items:center;justify-content:center;
   }
   .app-sidebar{
-    width:264px;position:fixed;left:0;top:0;height:100vh;transform:translateX(-100%);
-    transition:transform .22s ease;box-shadow:var(--shadow-lift);overflow-y:auto;
+    width:264px;transform:translateX(-100%);
+    transition:transform .22s ease;box-shadow:var(--shadow-lift);
   }
   .app-sidebar.open{transform:translateX(0);}
   .sidebar-backdrop{

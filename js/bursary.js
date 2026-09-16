@@ -56,16 +56,6 @@ function bursaryWorkflowBadge(status) {
 
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
-async function toggleGuarantorReceived(loanId, guarantorNumber, checked) {
-  try {
-    await verifyLoanGuarantorForm(loanId, guarantorNumber, checked);
-    toast(checked ? `Guarantor ${guarantorNumber}'s form confirmed received.` : `Guarantor ${guarantorNumber}'s confirmation removed.`);
-    openVettingModal(loanId); // refresh to update the "Both Confirmed" badge
-  } catch (err) {
-    toast(err.message || "Could not update guarantor status.", "error");
-  }
-}
-
 async function openVettingModal(loanId) {
   currentVettingLoanId = loanId;
   const box = document.getElementById("vettingModalBody");
@@ -78,6 +68,8 @@ async function openVettingModal(loanId) {
     const hasSalary = summary.gross_pay != null && summary.other_monthly_deductions != null;
     const bothConfirmed = guarantors.length === 2 && guarantors.every(g => g.form_received);
 
+    // Read-only here — only the Treasurer can confirm guarantor forms,
+    // during their assessment step. This is just visibility for Bursary.
     const guarantorRows = [1, 2].map(num => {
       const g = guarantors.find(x => x.guarantor_number === num);
       if (!g) return `<div class="hint" style="margin-bottom:8px;">Guarantor ${num}: not submitted with this application.</div>`;
@@ -87,10 +79,7 @@ async function openVettingModal(loanId) {
             <strong>Guarantor ${num}:</strong> ${g.full_name} — ${g.phone}<br>
             <span class="hint">${g.relationship}${g.alamanah_no ? " · " + g.alamanah_no : ""}${g.department ? " · " + g.department : ""}</span>
           </div>
-          <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:13px;">
-            <input type="checkbox" ${g.form_received ? "checked" : ""} onchange="toggleGuarantorReceived('${loanId}', ${num}, this.checked)">
-            Signed form received
-          </label>
+          <span>${g.form_received ? '<span class="pill pill-ok">Confirmed</span>' : '<span class="pill pill-wait">Not yet confirmed</span>'}</span>
         </div>`;
     }).join("");
 
@@ -101,9 +90,9 @@ async function openVettingModal(loanId) {
       </div>
 
       <div class="vetting-ledger" style="margin-bottom:20px;">
-        <div class="vetting-ledger-title">Guarantors ${bothConfirmed ? '<span class="pill pill-ok" style="margin-left:8px;">Both Confirmed</span>' : '<span class="pill pill-wait" style="margin-left:8px;">Awaiting Confirmation</span>'}</div>
+        <div class="vetting-ledger-title">Guarantors (for your information) ${bothConfirmed ? '<span class="pill pill-ok" style="margin-left:8px;">Both Confirmed</span>' : '<span class="pill pill-wait" style="margin-left:8px;">Awaiting Confirmation</span>'}</div>
         ${guarantorRows}
-        <p class="hint" style="margin-top:8px;">Both signed forms must be confirmed received before this application can be marked Eligible.</p>
+        <p class="hint" style="margin-top:8px;">The Treasurer confirms guarantor forms during their assessment — this is shown here for your awareness only.</p>
       </div>
 
       <div class="vetting-ledger">

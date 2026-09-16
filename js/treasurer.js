@@ -112,7 +112,7 @@ async function openAssessmentModal(loanId) {
       <div class="vetting-ledger" style="margin-bottom:20px;">
         <div class="vetting-ledger-title">Guarantors ${bothConfirmed ? '<span class="pill pill-ok" style="margin-left:8px;">Both Confirmed</span>' : '<span class="pill pill-wait" style="margin-left:8px;">Awaiting Confirmation</span>'}</div>
         ${guarantorRows}
-        <p class="hint" style="margin-top:8px;">Acknowledge each guarantor's signed form once received — this is shared with Bursary, so either office can confirm.</p>
+        <p class="hint" style="margin-top:8px;">Both signed forms must be confirmed received before this application can be marked Eligible.</p>
       </div>
 
       <div class="form-note" style="margin-bottom:20px;">
