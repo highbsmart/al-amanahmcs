@@ -18,16 +18,29 @@ Hand this file to your developer — every step below is required, in order.
 2. Open `supabase/schema.sql` from this project, paste the entire contents in,
    and click **Run**. This creates all tables, security rules, and functions
    (already includes the admin-only deduction controls described below — a
-   fresh install needs nothing further from the migration files).
-3. Open a second new query, paste in `supabase/seed_member_directory.sql`,
+   fresh install needs nothing further from the individual migration files).
+3. **Then run `supabase/full_schema_addendum.sql`** (new query, paste, Run).
+   This adds everything built after `schema.sql` was last updated: the
+   loan guarantor system, the dual SMS provider + auto-escalation setup,
+   Secretary's and Treasurer's reporting/bulk-upload tools, and delivery
+   tracking. **Read the notes at the bottom of that file before running it**
+   — it explains three manual steps you still need to do afterward (adding
+   your Termii/BulkSMS credentials, deploying two Edge Functions, and
+   scheduling two pg_cron jobs), none of which are things a SQL file can
+   do on its own.
+4. Open a third new query, paste in `supabase/seed_member_directory.sql`,
    and click **Run**. This loads the 3 demo members for testing — replace
    this file's contents with your real member list before real go-live
    (see the template/instructions inside that file for CSV import).
 
-**Already have a live project from before?** Run `supabase/migration_admin_deduction_controls.sql`
-once (after the existing `migration_savings_admin_charge_fix.sql`, if you
-haven't already) to bring it up to date — it adds the new columns and
-functions without touching any data you already have.
+**Already have a live project from before?** You almost certainly already
+have everything in `full_schema_addendum.sql` live (it was applied
+incrementally during development) — re-running it is safe for most of it,
+but read its warning about the one-time backfill statement first. Also run
+`supabase/migration_admin_deduction_controls.sql` once (after the existing
+`migration_savings_admin_charge_fix.sql`, if you haven't already) to bring
+an older project up to date — it adds the new columns and functions without
+touching any data you already have.
 
 ## 3. Turn off email confirmation
 Because members log in with an **Al-Amanah number**, not a real email
