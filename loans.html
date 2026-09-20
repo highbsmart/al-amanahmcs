@@ -148,7 +148,7 @@
   <div class="modal-card" style="max-width:640px;max-height:88vh;overflow:auto;">
     <div class="modal-header-row"><h3>Payment Receipt</h3><button type="button" class="modal-close-x" onclick="closeOffsetReceipt()" aria-label="Close">&times;</button></div>
     <div class="no-print" style="text-align:right;margin-bottom:14px;">
-      <button class="btn btn-primary btn-sm" onclick="window.print()">Print Receipt</button>
+      <button class="btn btn-primary btn-sm" onclick="printModal()">Print Receipt</button>
     </div>
     <div id="offsetReceiptBody"></div>
   </div>
@@ -158,7 +158,7 @@
   <div class="modal-card" style="max-width:640px;max-height:88vh;overflow:auto;">
     <div class="modal-header-row"><h3>Loan Offset Letter</h3><button type="button" class="modal-close-x" onclick="closeOffsetLetter()" aria-label="Close">&times;</button></div>
     <div class="no-print" style="text-align:right;margin-bottom:14px;">
-      <button class="btn btn-primary btn-sm" onclick="window.print()">Print Letter</button>
+      <button class="btn btn-primary btn-sm" onclick="printModal()">Print Letter</button>
     </div>
     <div id="offsetLetterBody"></div>
   </div>
@@ -180,7 +180,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="js/supabaseClient.js?v=3"></script>
 <script src="js/data-live.js?v=28"></script>
-<script src="js/main.js?v=6"></script>
+<script src="js/main.js?v=7"></script>
 <script src="js/route-guard.js?v=4"></script>
 <script src="js/loans.js?v=4"></script>
 <script src="js/loan-offset.js?v=2"></script>
