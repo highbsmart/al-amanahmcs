@@ -536,6 +536,12 @@ body[data-page-role="member"] .site-header{display:none;}
   .modal-overlay:not([hidden]) { position: static !important; background: none !important; padding: 0 !important; display: block !important; }
   .modal-card { box-shadow: none !important; max-height: none !important; overflow: visible !important; max-width: none !important; padding: 0 !important; margin: 0 !important; }
   .modal-header-row, .no-print { display: none !important; }
+  /* On pages like loans.html, a modal (e.g. the offset receipt/letter)
+     shares .app-main with a full table of unrelated page content —
+     printing the modal alone (via printModal(), see main.js) needs
+     everything else in .app-main hidden, or that surrounding content
+     prints too. */
+  body.printing-modal-only .app-main > *:not(.modal-overlay) { display: none !important; }
   @page { margin: 14mm; }
 }
 

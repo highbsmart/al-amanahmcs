@@ -106,6 +106,25 @@ function scrollToSection(id) {
   if (backdrop) backdrop.classList.remove("open");
 }
 
+/* Prints ONLY the currently-open modal, not the rest of the page's
+   content sitting alongside it inside .app-main. Plain window.print()
+   isn't enough here: the existing print CSS correctly shows .app-main
+   (needed for pages like payslip.html where the whole page IS the
+   printed content), but on pages like loans.html a modal (the offset
+   receipt/letter) shares .app-main with a full table of unrelated
+   page content — so printing the modal directly would also print
+   everything else in the page underneath it. This adds a temporary
+   class that tells the print stylesheet to hide anything in .app-main
+   that isn't the modal itself, then removes it once printing is done
+   (or cancelled) via the browser's own afterprint event. */
+function printModal() {
+  document.body.classList.add("printing-modal-only");
+  window.print();
+}
+window.addEventListener("afterprint", () => {
+  document.body.classList.remove("printing-modal-only");
+});
+
 /* ---------- App shell sidebar (mobile drawer) ----------
    Generic — works on any page that includes .app-sidebar,
    .sidebar-toggle-btn, and .sidebar-backdrop, no per-page JS needed. */
